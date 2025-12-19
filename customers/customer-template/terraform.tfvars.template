@@ -1,0 +1,44 @@
+# Customer-Specific Terraform Variables
+# Copy this to terraform.tfvars and update with actual values
+
+# GCP Project Configuration
+project_id     = "YOUR_GCP_PROJECT_ID"
+primary_region = "asia-south1"  # e.g., asia-south1, us-central1, europe-west1
+customer_name  = "CUSTOMER_NAME"
+environment    = "dev"  # dev, staging, or prod
+
+# Common Labels (for cost tracking and organization)
+labels = {
+  customer    = "CUSTOMER_NAME"
+  team        = "infrastructure"
+  cost_center = "COST_CENTER_CODE"
+  managed_by  = "terraform"
+}
+
+# Networking Configuration
+network_name = "CUSTOMER_NAME-ENV-vpc"
+subnet_cidr  = "10.0.0.0/24"
+enable_nat   = true
+
+# Compute Configuration
+create_compute_instance = false  # Set to true to create compute instances
+compute_machine_type    = "e2-medium"
+compute_zone            = "asia-south1-a"
+
+# Database Configuration
+create_database  = false  # Set to true to create Cloud SQL
+database_version = "POSTGRES_15"  # or MYSQL_8_0
+database_tier    = "db-custom-2-7680"
+
+# Storage Configuration
+create_storage_bucket = true
+storage_class         = "REGIONAL"  # REGIONAL, STANDARD, NEARLINE, COLDLINE
+
+# Load Balancer Configuration
+create_load_balancer = false  # Set to true to create load balancer
+ssl_enabled          = false  # Set to true for HTTPS
+
+# Notes:
+# - Customize these values based on customer requirements
+# - Use different values for dev/staging/prod
+# - Never commit this file with actual values (add to .gitignore)

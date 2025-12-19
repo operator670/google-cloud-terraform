@@ -1,0 +1,31 @@
+# Custom Firewall Rules Configuration Template
+# Copy this file to firewall.auto.tfvars and configure your rules
+
+custom_firewall_rules = [
+  # Example 1: Allow port 3000 for a specific IP to a specific instance tag
+  {
+    name        = "allow-3000-to-web"
+    description = "Allow port 3000 from customer IP to web servers"
+    direction   = "INGRESS"
+    priority    = 1000
+    ranges      = ["10.0.1.0/24"]
+    target_tags = ["web-01"] # Matches the custom_tag on the instance
+    allow = [{
+      protocol = "tcp"
+      ports    = ["3000"]
+    }]
+  },
+
+  # Example 2: Allow specific internal traffic between tiers
+  {
+    name        = "allow-app-to-db"
+    description = "Allow app servers to talk to DB port"
+    direction   = "INGRESS"
+    source_tags = ["app-server"]
+    target_tags = ["database"]
+    allow = [{
+      protocol = "tcp"
+      ports    = ["5432"]
+    }]
+  }
+]

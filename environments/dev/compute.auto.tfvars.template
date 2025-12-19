@@ -1,0 +1,43 @@
+# Compute Instances Configuration Template
+# Copy this file to compute.auto.tfvars and configure your instances
+# File will be auto-loaded by Terraform (no -var-file flag needed!)
+
+compute_instances = {
+  # Example 1: Web Server with NEW snapshot schedule
+  "web-01" = {
+    zone                    = "asia-south1-a"
+    machine_type            = "e2-micro"
+    disk_size_gb            = 30
+    disk_type               = "pd-standard"
+    additional_disks        = []
+    enable_snapshots        = true
+    snapshot_schedule       = "0 2 * * *"       # Create new schedule at 2 AM
+    snapshot_retention_days = 7
+    snapshot_schedule_id    = null               # Create new schedule
+    enable_scheduling       = true
+    start_schedule          = "0 8 * * MON-FRI"
+    stop_schedule           = "0 18 * * MON-FRI"
+    deletion_protection     = false
+    custom_tags             = ["http-server"]
+    custom_labels           = { role = "web" }
+  }
+
+  # Example 2: App Server using EXISTING snapshot schedule
+  # "app-01" = {
+  #   zone                    = "asia-south1-a"
+  #   machine_type            = "e2-medium"
+  #   disk_size_gb            = 50
+  #   disk_type               = "pd-balanced"
+  #   additional_disks        = []
+  #   enable_snapshots        = true
+  #   snapshot_schedule       = "0 2 * * *"       # Ignored when snapshot_schedule_id is set
+  #   snapshot_retention_days = 7
+  #   snapshot_schedule_id    = "projects/PROJECT_ID/regions/REGION/resourcePolicies/SCHEDULE_NAME"  # Use existing!
+  #   enable_scheduling       = false
+  #   deletion_protection     = false
+  #   custom_tags             = ["app-server"]
+  #   custom_labels           = { role = "app" }
+  # }
+
+  # Add more instances as needed
+}

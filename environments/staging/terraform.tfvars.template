@@ -1,0 +1,187 @@
+# Development Environment - Terraform Variables Template
+# Copy this file to terraform.tfvars and update with your values
+
+# GCP Project Configuration
+project_id     = "YOUR_PROJECT_ID"
+primary_region = "asia-south1"
+customer_name  = "customer1"
+environment    = "dev"
+
+# Common Labels
+labels = {
+  team        = "infrastructure"
+  cost_center = "engineering"
+}
+
+# Networking
+network_name = "customer1-dev-vpc"
+subnet_cidr  = "10.0.0.0/24"
+enable_nat   = true
+
+#################################################
+# COMPUTE INSTANCES (Multiple instances supported)
+#################################################
+
+compute_instances = {
+  # Example: Web Server
+  "web-01" = {
+    zone                    = "asia-south1-a"
+    machine_type            = "e2-micro"
+    disk_size_gb            = 30
+    disk_type               = "pd-standard"
+    additional_disks        = []
+    enable_snapshots        = false
+    enable_scheduling       = true  # Cost savings in dev
+    start_schedule          = "0 8 * * MON-FRI"
+    stop_schedule           = "0 18 * * MON-FRI"
+    deletion_protection     = false
+    custom_tags             = ["http-server"]
+    custom_labels           = { role = "web" }
+  }
+
+  # Add more instances as needed:
+  # "app-01" = { ... }
+  # "db-01" = { ... }
+}
+
+#################################################
+# STORAGE BUCKETS (Multiple buckets supported)
+#################################################
+
+storage_buckets = {
+  # Example: Application Data Bucket
+  "app-data" = {
+    location           = "asia-south1"
+    storage_class      = "REGIONAL"
+    versioning_enabled = false
+    lifecycle_rules = [
+      {
+        action = {
+          type          = "Delete"
+          storage_class = null
+        }
+        condition = {
+          age            = 90
+          with_state     = "ANY"
+          matches_storage_class = null
+          created_before = null
+          num_newer_versions = null
+        }
+      }
+    ]
+    iam_bindings   = []
+    retention_policy = null
+    custom_labels  = { purpose = "application-data" }
+  }
+
+  # Add more buckets as needed:
+  # "backups" = { ... }
+  # "logs" = { ... }
+}
+
+#################################################
+# DATABASES (Multiple Cloud SQL instances supported)
+#################################################
+
+databases = {
+  # Example: PostgreSQL Database
+  # Uncomment and configure as needed
+  # "postgres-main" = {
+  #   region                = "asia-south1"
+  #   database_version      = "POSTGRES_15"
+  #   tier                  = "db-f1-micro"
+  #   ha_enabled            = false
+  #   backup_enabled        = true
+  #   backup_retention_days = 7
+  #   deletion_protection   = false
+  #   databases             = []
+  #   users                 = []
+  #   custom_labels         = { type = "postgres" }
+  # }
+}
+
+#################################################
+# GKE CLUSTERS (Multiple clusters supported)
+#################################################
+
+gke_clusters = {
+  # Example: Development GKE Cluster
+  # Uncomment and configure as needed
+  # "dev-cluster" = {
+  #   region                  = "asia-south1"
+  #   pods_ip_range_name      = "gke-pods"
+  #   services_ip_range_name  = "gke-services"
+  #   enable_private_cluster  = true
+  #   enable_private_nodes    = true
+  #   master_ipv4_cidr_block  = "172.16.0.0/28"
+  #   node_pools = [
+  #     {
+  #       name         = "default-pool"
+  #       machine_type = "e2-medium"
+  #       min_count    = 1
+  #       max_count    = 3
+  #       disk_size_gb = 50
+  #       auto_repair  = true
+  #       auto_upgrade = true
+  #     }
+  #   ]
+  #   workload_identity     = true
+  #   enable_network_policy = true
+  #   release_channel       = "REGULAR"
+  #   custom_labels         = { environment = "dev" }
+  # }
+}
+
+#################################################
+# CLOUD RUN SERVICES (Multiple services supported)
+#################################################
+
+cloud_run_services = {
+  # Example: API Service
+  # Uncomment and configure as needed
+  # "api-service" = {
+  #   region                = "asia-south1"
+  #   image                 = "gcr.io/YOUR_PROJECT/api:latest"
+  #   cpu_limit             = "1000m"
+  #   memory_limit          = "512Mi"
+  #   timeout_seconds       = 300
+  #   min_instances         = 0
+  #   max_instances         = 10
+  #   env_vars = [
+  #     {
+  #       name  = "ENV"
+  #       value = "development"
+  #     }
+  #   ]
+  #   env_secrets           = []
+  #   allow_unauthenticated = false
+  #   custom_labels         = { service = "api" }
+  # }
+}
+
+#################################################
+# CLOUD FUNCTIONS (Multiple functions supported)
+#################################################
+
+cloud_functions = {
+  # Example: HTTP Function
+  # Uncomment and configure as needed
+  # "webhook-handler" = {
+  #   region                = "asia-south1"
+  #   runtime               = "python311"
+  #   entry_point           = "main"
+  #   source_dir            = "./functions/webhook"
+  #   available_memory      = "256M"
+  #   available_cpu         = "1"
+  #   timeout_seconds       = 60
+  #   min_instances         = 0
+  #   max_instances         = 10
+  #   env_vars              = {}
+  #   secret_env_vars       = []
+  #   trigger_http          = true
+  #   trigger_event_type    = null
+  #   trigger_pubsub_topic  = null
+  #   allow_unauthenticated = false
+  #   custom_labels         = { type = "webhook" }
+  # }
+}

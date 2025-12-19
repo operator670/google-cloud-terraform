@@ -1,0 +1,27 @@
+# Cloud Run Services Configuration Template
+# Copy this file to cloud-run.auto.tfvars and configure your services
+# File will be auto-loaded by Terraform (no -var-file flag needed!)
+
+cloud_run_services = {
+  # Example: API Service
+  # Uncomment and configure as needed
+  
+  # "api-service" = {
+  #   region                = "asia-south1"
+  #   image                 = "gcr.io/YOUR_PROJECT/api:latest"
+  #   cpu_limit             = "1000m"
+  #   memory_limit          = "512Mi"
+  #   timeout_seconds       = 300
+  #   min_instances         = 0
+  #   max_instances         = 10
+  #   env_vars = [
+  #     {
+  #       name  = "ENV"
+  #       value = "development"
+  #     }
+  #   ]
+  #   env_secrets           = []
+  #   allow_unauthenticated = false
+  #   custom_labels         = { service = "api" }
+  # }
+}
