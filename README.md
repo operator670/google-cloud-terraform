@@ -1,99 +1,96 @@
+# Google Cloud Platform Infrastructure
 
-# Multi-Customer GCP Terraform Infrastructure
+This repository contains the Terraform codebase for managing the Multi-Customer Google Cloud Platform (GCP) infrastructure. It is designed using the **Composition Module Pattern** to ensure consistency, scalability, and strict governance across Development, Staging, and Production environments.
 
-A mature, enterprise-grade Terraform codebase implementation using the **Composition Module Pattern** to manage Google Cloud Platform infrastructure at scale.
+## 🏗️ Architecture
 
-## 🏗️ Technical Architecture (Level 3 Maturity)
+The infrastructure adopts a **Unified Blueprint Architecture** to maximize code reuse and eliminate configuration drift.
 
-This repository implements the industry-standard **Composition Pattern**:
+### 1. Composition Blueprint (`modules/composition`)
+The core architectural logic is centralized in the `modules/composition/environment` module. This "Blueprint" defines the standard reference architecture (VPC, Compute, GKE, Databases, IAM) that is instantiated across all environments. Changes made to this blueprint are automatically propagated, ensuring that `dev` and `prod` remain architecturally consistent.
 
-### 1. The Blueprint (`modules/composition/environment`)
-Instead of defining resources in each environment, we define the **entire architecture** once in a "Blueprint" module.
--   **Consolidated Logic**: Computes, DBs, GKE, Networking, IAM, and Secrets usage are orchestrated here.
--   **Single Source of Truth**: Changes to the architecture are made here and propagated to all environments.
--   **Drift-Proof**: `dev`, `staging`, and `prod` share the exact same structural code.
+### 2. Environment Configurations (`environments/*`)
+Environments are purposefully lightweight. They consume the **Composition Blueprint** and apply environment-specific configurations via variables (e.g., machine types, cluster sizes, high-availability settings).
 
-### 2. The Environments (`environments/*`)
-Each environment is now extremely thin (just a `main.tf` calling the blueprint) and data-driven (`.tfvars`).
--   **dev**: Cost-optimized (Spot VMs, small DBs)
--   **staging**: Production-like parity
--   **prod**: High Availability, Protection Enabled
-
-### 3. The Core Modules (`modules/{global,regional}`)
-Primitive resources resource groups.
--   **Global**: Networking (VPC, Firewalls), IAM, Secret Manager
--   **Regional**: Compute, Database (Cloud SQL), GKE, Storage
+### 3. Service Modules (`modules/{global,regional}`)
+Granular, reusable modules for individual GCP services:
+-   **Global**: Networking (VPC, Firewall, NAT), IAM, Secret Manager.
+-   **Regional**: Compute Engine, GKE, Cloud SQL, Cloud Storage.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
-### 1. Configure Backend (Partial Configuration)
-We use `backend-configs` to separate sensitive state bucket names from code.
+### 1. Backend Configuration
+Sensitive state bucket configurations are decoupled from the code using partial backend configurations.
 
 ```bash
 cd environments/dev
+# Initialize Terraform with the dev backend config
 terraform init -backend-config=../../backend-configs/dev.tfvars
 ```
 
-### 2. Configure Resources
-We use split `.auto.tfvars` for clean organization.
--   Copy `compute.auto.tfvars.template` -> `compute.auto.tfvars`
--   Edit your instances, machine types, and flags.
+### 2. Resource Configuration
+We use **Split Variables** (`*.auto.tfvars`) for cleaner organization. Terraform automatically loads all files matching `*.auto.tfvars`.
 
-### 3. Deploy
+-   `compute.auto.tfvars`: VM instances and scheduling.
+-   `database.auto.tfvars`: Cloud SQL instances and users.
+-   `gke.auto.tfvars`: Kubernetes clusters and node pools.
+
+### 3. Deployment
 ```bash
-terraform plan   # Auto-loads all your .tfvars
+# Preview changes
+terraform plan
+
+# Apply changes
 terraform apply
 ```
 
 ---
 
-## 🧱 Key Features (Audit Enhancements)
+## 🛡️ Key Capabilities
 
--   **🛡️ Security First**: Default-Deny Firewalls, Non-Destructive IAM, Private GKE Nodes.
--   **🔐 Secret Management**: Passwords fetch directly from Google Secret Manager (`password_secret_id`).
--   **💰 Cost Optimization**: Native support for Spot VMs (`is_spot = true`) and Schedule-based shutdowns.
--   **🔓 Flexibility**: Inject `custom_firewall_rules` per environment without changing code.
+| Domain | Feature | Description |
+| :--- | :--- | :--- |
+| **Security** | **Zero-Trust Networking** | Default-Deny ingress rules enforced globally. |
+| | **Secret Management** | Database passwords fetched dynamically from GCP Secret Manager. |
+| | **Non-Destructive IAM** | IAM managed via `_member` resources to coexist with manual grants. |
+| **Cost** | **Spot Instances** | Native support for Spot VMs (`is_spot = true`) for non-prod workloads. |
+| | **Scheduling** | Automated start/stop schedules for development resources. |
+| **Observability** | **Centralized Logging** | Automated Log Sinks export to BigQuery/Storage. |
+| | **Monitoring** | Pre-provisioned Dashboards and Alert Policies. |
 
 ---
 
-## ⚠️ Handling "Drift" (Manual Changes)
+## ⚙️ Operational Governance
 
-"Drift" is when someone manually changes a resource in the Google Cloud Console (e.g., opens a firewall port manually), making it different from the Terraform code.
+### Handling Manual Changes ("Drift")
+Infrastructure drift occurs when resources are modified manually in the Cloud Console, causing a divergence from the Terraform state.
 
-### Scenario A: "I want to keep the manual change" (Codify it)
-**Action**: You must update your Terraform code to match what you did in the console.
-1.  **Identify**: Run `terraform plan`. It will say `~ update in-place` and show it wants to *undo* your manual change.
-2.  **Update Code**: Edit your `.auto.tfvars` (e.g., add the new firewall rule to `custom_firewall_rules`).
-3.  **Verify**: Run `terraform plan` again. It should now say `No changes`.
+#### Scenario 1: Legitimate Changes (Codify)
+If a manual change (e.g., a hotfix firewall rule) needs to be permanent:
+1.  Identify the change via `terraform plan`.
+2.  Update the corresponding `.auto.tfvars` file (e.g., add to `custom_firewall_rules`).
+3.  Run `terraform plan` to verify the code now matches the infrastructure.
 
-### Scenario B: "The manual change was a mistake/hack" (Revert it)
-**Action**: Let Terraform overwrite the manual change.
-1.  **Run Apply**: `terraform apply`.
-2.  **Result**: Terraform will restore the infrastructure to exactly what is defined in the code (e.g., closing that manually opened port).
-
-### Scenario C: "I deleted something manually"
-1.  **DANGER**: If you delete a resource manually, Terraform will try to recreate it next time (which might fail if dependent IDs changed).
-2.  **Fix**: Run `terraform apply` immediately to restore it, or remove it from code if meant to be deleted.
-
-> **Pro Tip**: To prevent drift, use IAM conditions to remove "Editor" access for humans in Production, granting only "Viewer".
+#### Scenario 2: Unauthorized Changes (Remediate)
+If a change was accidental or unauthorized:
+1.  Run `terraform apply`.
+2.  Terraform will revert the resource to its defined state (e.g., removing unauthorized firewall rules).
 
 ---
 
 ## 📂 Repository Structure
 
-```
+```plaintext
 ├── modules/
-│   ├── composition/environment/  # <-- THE BLUEPRINT
-│   ├── global/
-│   └── regional/
+│   ├── composition/          # Architectural Blueprints
+│   ├── global/               # Global Resources (IAM, VPC)
+│   └── regional/             # Regional Resources (GKE, SQL)
 ├── environments/
-│   ├── dev/                      # <-- Consumes Blueprint
-│   ├── staging/
-│   └── prod/
-├── backend-configs/              # <-- State bucket configs
-└── scripts/
+│   ├── dev/                  # Development Environment
+│   ├── staging/              # Staging Environment
+│   └── prod/                 # Production Environment
+├── backend-configs/          # Terraform State Backend Configurations
+└── scripts/                  # Automation Scripts
 ```
-
->>>>>>> 0ab54ad (Initial Code added)
