@@ -4,7 +4,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.0"
+      version = "7.14.1"
     }
     random = {
       source  = "hashicorp/random"
@@ -13,7 +13,7 @@ terraform {
   }
 
   # Backend configuration - customize per customer
-  # Initialize with: terraform init -backend-config=../../customers/<customer-name>/backend-config-dev.tfvars
+  # Initialize with: terraform init -backend-config=../../backend-configs/dev.tfvars
   backend "gcs" {
     # bucket  = "CUSTOMER_NAME-terraform-state"
     # prefix  = "dev"
