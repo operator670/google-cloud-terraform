@@ -15,7 +15,7 @@ output "service_account_emails" {
 
 output "instance_ips" {
   description = "Map of compute instance internal IPs"
-  value       = { for k, v in module.compute_instances : k => v.internal_ip }
+  value       = { for k, v in module.compute_instances : k => v.instance_internal_ip }
 }
 
 output "database_connection_names" {

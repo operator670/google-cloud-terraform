@@ -69,12 +69,7 @@ resource "google_container_cluster" "primary" {
   }
 
   # Shielded nodes
-  dynamic "enable_shielded_nodes" {
-    for_each = var.enable_shielded_nodes ? [1] : []
-    content {
-      enabled = true
-    }
-  }
+  enable_shielded_nodes = var.enable_shielded_nodes
 
   # Addons
   addons_config {

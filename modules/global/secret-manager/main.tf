@@ -7,7 +7,7 @@ resource "google_secret_manager_secret" "secrets" {
   labels    = each.value.labels
 
   replication {
-    dynamic "automatic" {
+    dynamic "auto" {
       for_each = each.value.replication_policy.automatic ? [1] : []
       content {}
     }

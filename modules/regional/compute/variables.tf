@@ -145,7 +145,6 @@ variable "is_spot" {
 }
 
 variable "additional_disks" {
-variable "additional_disks" {
   description = "List of additional disks to attach"
   type = list(object({
     name        = string
@@ -158,6 +157,7 @@ variable "additional_disks" {
   }))
   default = []
 }
+
 
 # Snapshot Configuration
 variable "enable_snapshots" {

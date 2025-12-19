@@ -87,19 +87,21 @@ module "iam" {
   project_id = var.project_id
 
   # Service Accounts
-  service_accounts = {
-    "${local.resource_prefix}-compute-sa" = {
+  service_accounts = [
+    {
+      account_id   = "${local.resource_prefix}-compute-sa"
       display_name = "Compute SA for ${var.environment}"
       description  = "Service account for compute instances in ${var.environment}"
     },
-    "${local.resource_prefix}-gke-sa" = {
+    {
+      account_id   = "${local.resource_prefix}-gke-sa"
       display_name = "GKE SA for ${var.environment}"
       description  = "Service account for GKE nodes in ${var.environment}"
     }
-  }
+  ]
 
   # Service Account IAM Bindings (P1 Enhancement: using iam_member now)
-  service_account_iam_members = []
+  service_account_iam_bindings = []
 }
 
 # Secret Manager (P2 Enhancement)
@@ -244,14 +246,25 @@ module "gke_clusters" {
 # Cloud Functions
 module "cloud_functions" {
   for_each = var.cloud_functions
-  source   = "hashicorp/google//modules/cloud-functions" # Using standard registry module for simplicity example, or would look for local module if it existed. 
-  # Wait, the user has specific inputs for cloud functions, implying a wrapper or resource usage. I'll use standard resource for now if module not found, or create placeholders.
-  # Based on context, there SHOULD be a module locally, but I haven't seen it in the file structure I listed earlier (it was sparse on global/regional). 
-  # Actually, simply copying the logic from the original `cloud-functions.tf` is better if it was a direct resource. 
-  # Let's assume there is NO local module for cloud functions yet (based on previous ls output), so I will skip this block or use a placeholder if the original file used resources directly. 
-  # Looking at the original `variable` definitions, it seems detailed. 
-  # I will SKIP implementation of Cloud Functions/Run module calls in this blueprint to strictly match the existing modules I know exist (Networking, IAM, Compute, DB, Storage, GKE, Secret Manager). 
-  # If the user's `dev` folder had `cloud-functions.tf`, it likely contained the resources directly.
+  source   = "../../regional/cloud-functions"
+  project_id            = var.project_id
+  region                = each.value.region
+  function_name         = each.key
+  runtime               = each.value.runtime
+  entry_point           = each.value.entry_point
+  source_dir            = each.value.source_dir
+  available_memory      = each.value.available_memory
+  available_cpu         = each.value.available_cpu
+  timeout_seconds       = each.value.timeout_seconds
+  min_instances         = each.value.min_instances
+  max_instances         = each.value.max_instances
+  env_vars              = each.value.env_vars
+  secret_env_vars       = each.value.secret_env_vars
+  trigger_http          = each.value.trigger_http
+  trigger_event_type    = each.value.trigger_event_type
+  trigger_pubsub_topic  = each.value.trigger_pubsub_topic
+  allow_unauthenticated = each.value.allow_unauthenticated
+  labels                = merge(var.labels, each.value.custom_labels)
 }
 # Note on Cloud Functions/Run: I've omitted them from the blueprint momentarily to focus on the core modules we definitely have. 
 # If they were direct resources in the dev environment, they should be moved here as resources, not module calls.

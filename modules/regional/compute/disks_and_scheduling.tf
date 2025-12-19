@@ -48,20 +48,11 @@ resource "google_compute_resource_policy" "snapshot" {
 locals {
   snapshot_policy_id = var.enable_snapshots ? (
     var.snapshot_schedule_id != null ? var.snapshot_schedule_id : (
-      length(google_compute_resource_policy.snapshot) > 0 ? google_compute_resource_policy.snapshot[0].id : null
+      length(google_compute_resource_policy.snapshot) > 0 ? google_compute_resource_policy.snapshot[0].name : null
     )
   ) : null
 }
 
-# Attach Snapshot Policy to Boot Disk (for single instances)
-resource "google_compute_disk_resource_policy_attachment" "boot_disk" {
-  count = local.snapshot_policy_id != null && !var.enable_instance_group ? 1 : 0
-
-  name    = local.snapshot_policy_id
-  disk    = google_compute_instance.main[0].boot_disk[0].source
-  zone    = var.zone
-  project = var.project_id
-}
 
 # Instance Schedule (Start/Stop)
 resource "google_compute_resource_policy" "instance_schedule" {
@@ -83,12 +74,13 @@ resource "google_compute_resource_policy" "instance_schedule" {
 }
 
 # Attach Instance Schedule
-resource "google_compute_instance_resource_policy_attachment" "schedule" {
-  count = var.enable_scheduling && var.schedule_config != null && !var.enable_instance_group ? 1 : 0
 
-  instance = google_compute_instance.main[0].name
-  zone     = var.zone
-  project  = var.project_id
-  
-  resource_policy = google_compute_resource_policy.instance_schedule[0].id
+# Attach Snapshot Policy to Boot Disk (for single instances)
+resource "google_compute_disk_resource_policy_attachment" "boot_disk" {
+  count = var.enable_snapshots && !var.enable_instance_group && (var.snapshot_schedule_id != null || var.snapshot_schedule != null) ? 1 : 0
+
+  name    = local.snapshot_policy_id
+  disk    = google_compute_instance.main[0].name
+  zone    = var.zone
+  project = var.project_id
 }

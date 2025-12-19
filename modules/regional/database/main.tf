@@ -35,7 +35,7 @@ resource "google_sql_database_instance" "main" {
     ip_configuration {
       ipv4_enabled    = length(var.authorized_networks) > 0
       private_network = var.network
-      require_ssl     = var.require_ssl
+      ssl_mode        = var.require_ssl ? "TRUSTED_CLIENT_CERTIFICATE_REQUIRED" : "ENCRYPTED_ONLY"
 
       dynamic "authorized_networks" {
         for_each = var.authorized_networks
@@ -82,7 +82,7 @@ resource "google_sql_database" "databases" {
 # Fetch secrets for users who defined password_secret_id
 data "google_secret_manager_secret_version" "user_passwords" {
   for_each = {
-    for user in var.users : user.name => user.password_secret_id
+    for user in nonsensitive(var.users) : user.name => user.password_secret_id
     if user.password_secret_id != null
   }
   secret = each.value
@@ -90,7 +90,7 @@ data "google_secret_manager_secret_version" "user_passwords" {
 
 # Users
 resource "google_sql_user" "users" {
-  for_each = { for user in var.users : user.name => user }
+  for_each = { for user in nonsensitive(var.users) : user.name => user }
 
   name     = each.value.name
   project  = var.project_id

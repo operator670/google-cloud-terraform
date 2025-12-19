@@ -59,10 +59,13 @@ variable "lifecycle_rules" {
   default = []
 }
 
-variable "retention_policy_retention_period" {
-  description = "Retention period in seconds (if set, bucket becomes locked)"
-  type        = number
-  default     = null
+variable "retention_policy" {
+  description = "Configuration of the bucket's data retention policy for how long objects in the bucket should be retained."
+  type = object({
+    is_locked        = bool
+    retention_period = number
+  })
+  default = null
 }
 
 variable "encryption_key" {
@@ -99,11 +102,11 @@ variable "cors_rules" {
   default = []
 }
 
-variable "iam_members" {
-  description = "IAM members and their roles for the bucket"
+variable "iam_bindings" {
+  description = "IAM bindings for the bucket"
   type = list(object({
-    role   = string
-    member = string
+    role    = string
+    members = list(string)
   }))
   default = []
 }

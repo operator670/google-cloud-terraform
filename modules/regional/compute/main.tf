@@ -16,7 +16,7 @@ resource "google_compute_instance" "main" {
   allow_stopping_for_update   = var.allow_stopping_for_update
   can_ip_forward              = var.can_ip_forward
   hostname                    = var.hostname
-  enable_display              = var.enable_display
+  resource_policies = var.enable_scheduling && var.schedule_config != null ? [google_compute_resource_policy.instance_schedule[0].self_link] : []
 
   # Boot Disk
   boot_disk {

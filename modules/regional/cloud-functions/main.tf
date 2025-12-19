@@ -81,12 +81,7 @@ resource "google_cloudfunctions2_function" "main" {
     
     service_account_email = var.service_account_email
 
-    dynamic "vpc_connector" {
-      for_each = var.vpc_connector != null ? [1] : []
-      content {
-        connector = var.vpc_connector
-      }
-    }
+    vpc_connector = var.vpc_connector
 
     vpc_connector_egress_settings = var.vpc_connector != null ? var.vpc_connector_egress_settings : null
   }

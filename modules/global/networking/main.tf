@@ -49,10 +49,10 @@ resource "google_compute_firewall" "rules" {
   priority                = each.value.priority
   source_ranges           = each.value.direction == "INGRESS" ? each.value.ranges : null
   destination_ranges      = each.value.direction == "EGRESS" ? each.value.ranges : null
-  source_tags             = each.value.source_tags
-  source_service_accounts = each.value.source_service_accounts
-  target_tags             = each.value.target_tags
-  target_service_accounts = each.value.target_service_accounts
+  source_tags             = length(each.value.source_tags) > 0 ? each.value.source_tags : null
+  source_service_accounts = length(each.value.source_service_accounts) > 0 ? each.value.source_service_accounts : null
+  target_tags             = length(each.value.target_tags) > 0 ? each.value.target_tags : null
+  target_service_accounts = length(each.value.target_service_accounts) > 0 ? each.value.target_service_accounts : null
 
   dynamic "allow" {
     for_each = each.value.allow
@@ -80,10 +80,7 @@ resource "google_compute_route" "routes" {
   network           = google_compute_network.vpc.name
   description       = each.value.description
   dest_range        = each.value.dest_range
-  next_hop_internet = each.value.next_hop_internet ? "default-internet-gateway" : null
-  next_hop_ip       = each.value.next_hop_ip
-  next_hop_instance = each.value.next_hop_instance
-  next_hop_gateway  = each.value.next_hop_gateway
+  next_hop_gateway  = each.value.next_hop_internet ? "default-internet-gateway" : each.value.next_hop_gateway
   priority          = each.value.priority
   tags              = each.value.tags
 }

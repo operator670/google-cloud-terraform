@@ -32,9 +32,10 @@ resource "google_storage_bucket" "main" {
   }
 
   dynamic "retention_policy" {
-    for_each = var.retention_policy_retention_period != null ? [1] : []
+    for_each = var.retention_policy != null ? [1] : []
     content {
-      retention_period = var.retention_policy_retention_period
+      is_locked        = var.retention_policy.is_locked
+      retention_period = var.retention_policy.retention_period
     }
   }
 
@@ -57,10 +58,10 @@ resource "google_storage_bucket" "main" {
 }
 
 # IAM Bindings
-resource "google_storage_bucket_iam_member" "members" {
-  for_each = { for idx, binding in var.iam_members : idx => binding }
+resource "google_storage_bucket_iam_binding" "bindings" {
+  for_each = { for idx, binding in var.iam_bindings : idx => binding }
 
-  bucket = google_storage_bucket.main.name
-  role   = each.value.role
-  member = each.value.member
+  bucket  = google_storage_bucket.main.name
+  role    = each.value.role
+  members = each.value.members
 }
