@@ -25,6 +25,7 @@ storage_buckets = {
     ]
     iam_bindings      = []
     retention_policy  = null
+    folders           = ["reports", "images/raw", "images/processed"]
     custom_labels     = { purpose = "application-data" }
   }
 

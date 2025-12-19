@@ -82,27 +82,27 @@ variable "custom_firewall_rules" {
 variable "compute_instances" {
   description = "Map of compute instances to create"
   type = map(object({
-    zone                     = string
-    machine_type             = string
-    disk_size_gb             = number
-    disk_type                = string
-    additional_disks         = list(object({
+    zone         = string
+    machine_type = string
+    disk_size_gb = number
+    disk_type    = string
+    additional_disks = list(object({
       name        = string
       size_gb     = number
       type        = string
       auto_delete = bool
     }))
-    enable_snapshots         = bool
-    snapshot_schedule        = optional(string, "0 2 * * *")
-    snapshot_retention_days  = optional(number, 7)
-    snapshot_schedule_id     = optional(string, null)
-    enable_scheduling        = optional(bool, false)
-    start_schedule           = optional(string, "0 8 * * MON-FRI")
-    stop_schedule            = optional(string, "0 18 * * MON-FRI")
-    deletion_protection      = optional(bool, false)
-    custom_tags              = optional(list(string), [])
-    custom_labels            = optional(map(string), {})
-    is_spot                  = optional(bool, false)
+    enable_snapshots        = bool
+    snapshot_schedule       = optional(string, "0 2 * * *")
+    snapshot_retention_days = optional(number, 7)
+    snapshot_schedule_id    = optional(string, null)
+    enable_scheduling       = optional(bool, false)
+    start_schedule          = optional(string, "0 8 * * MON-FRI")
+    stop_schedule           = optional(string, "0 18 * * MON-FRI")
+    deletion_protection     = optional(bool, false)
+    custom_tags             = optional(list(string), [])
+    custom_labels           = optional(map(string), {})
+    is_spot                 = optional(bool, false)
   }))
   default = {}
 }
@@ -117,28 +117,29 @@ variable "storage_buckets" {
     location           = string
     storage_class      = string
     versioning_enabled = optional(bool, false)
-    lifecycle_rules    = optional(list(object({
+    lifecycle_rules = optional(list(object({
       action = object({
         type          = string
         storage_class = optional(string)
       })
       condition = object({
-        age                    = optional(number)
-        with_state             = optional(string)
-        matches_storage_class  = optional(list(string))
-        created_before         = optional(string)
-        num_newer_versions     = optional(number)
+        age                   = optional(number)
+        with_state            = optional(string)
+        matches_storage_class = optional(list(string))
+        created_before        = optional(string)
+        num_newer_versions    = optional(number)
       })
     })), [])
-    iam_bindings      = optional(list(object({
+    iam_bindings = optional(list(object({
       role    = string
       members = list(string)
     })), [])
-    retention_policy  = optional(object({
+    retention_policy = optional(object({
       retention_period = number
       is_locked        = optional(bool, false)
     }), null)
-    custom_labels = optional(map(string), {})
+    folders                    = optional(list(string), [])
+    custom_labels              = optional(map(string), {})
     delete_contents_on_destroy = optional(bool, false)
   }))
   default = {}
@@ -158,12 +159,12 @@ variable "databases" {
     backup_enabled        = optional(bool, true)
     backup_retention_days = optional(number, 7)
     deletion_protection   = optional(bool, false)
-    databases             = optional(list(object({
+    databases = optional(list(object({
       name      = string
       charset   = optional(string, "UTF8")
       collation = optional(string)
     })), [])
-    users                 = optional(list(object({
+    users = optional(list(object({
       name               = string
       password           = optional(string)
       password_secret_id = optional(string)
@@ -171,13 +172,13 @@ variable "databases" {
     })), [])
     custom_labels = optional(map(string), {})
     read_replicas = optional(list(object({
-      name            = string
-      tier            = string
-      zone            = optional(string)
-      disk_size       = optional(number)
-      disk_type       = optional(string)
-      user_labels     = optional(map(string))
-      database_flags  = optional(list(object({
+      name        = string
+      tier        = string
+      zone        = optional(string)
+      disk_size   = optional(number)
+      disk_type   = optional(string)
+      user_labels = optional(map(string))
+      database_flags = optional(list(object({
         name  = string
         value = string
       })), [])
@@ -193,14 +194,14 @@ variable "databases" {
 variable "gke_clusters" {
   description = "Map of GKE clusters to create"
   type = map(object({
-    region                  = string
-    pods_ip_range_name      = string
-    services_ip_range_name  = string
-    enable_private_cluster  = optional(bool, true)
-    enable_private_nodes    = optional(bool, true)
-    master_ipv4_cidr_block  = optional(string, "172.16.0.0/28")
-    enable_autopilot        = optional(bool, false)
-    node_pools              = list(object({
+    region                 = string
+    pods_ip_range_name     = string
+    services_ip_range_name = string
+    enable_private_cluster = optional(bool, true)
+    enable_private_nodes   = optional(bool, true)
+    master_ipv4_cidr_block = optional(string, "172.16.0.0/28")
+    enable_autopilot       = optional(bool, false)
+    node_pools = list(object({
       name         = string
       machine_type = string
       min_count    = number
@@ -216,7 +217,7 @@ variable "gke_clusters" {
     enable_network_policy = optional(bool, true)
     release_channel       = optional(string, "REGULAR")
     custom_labels         = optional(map(string), {})
-    authorized_networks   = optional(list(object({
+    authorized_networks = optional(list(object({
       cidr_block   = string
       display_name = string
     })), [])
@@ -242,9 +243,9 @@ variable "secrets" {
     }), { automatic = true })
     labels = optional(map(string), {})
     versions = optional(list(object({
-      version_id = string
+      version_id  = string
       secret_data = string
-      enabled    = optional(bool, true)
+      enabled     = optional(bool, true)
     })), [])
     iam_bindings = optional(list(object({
       role    = string
@@ -261,18 +262,18 @@ variable "secrets" {
 variable "cloud_run_services" {
   description = "Map of Cloud Run services to create"
   type = map(object({
-    region                = string
-    image                 = string
-    cpu_limit             = optional(string, "1000m")
-    memory_limit          = optional(string, "512Mi")
-    timeout_seconds       = optional(number, 300)
-    min_instances         = optional(number, 0)
-    max_instances         = optional(number, 10)
-    env_vars              = optional(list(object({
+    region          = string
+    image           = string
+    cpu_limit       = optional(string, "1000m")
+    memory_limit    = optional(string, "512Mi")
+    timeout_seconds = optional(number, 300)
+    min_instances   = optional(number, 0)
+    max_instances   = optional(number, 10)
+    env_vars = optional(list(object({
       name  = string
       value = string
     })), [])
-    env_secrets           = optional(list(object({
+    env_secrets = optional(list(object({
       name    = string
       secret  = string
       version = optional(string, "latest")
@@ -290,26 +291,26 @@ variable "cloud_run_services" {
 variable "cloud_functions" {
   description = "Map of Cloud Functions to create"
   type = map(object({
-    region               = string
-    runtime              = string
-    entry_point          = string
-    source_dir           = string
-    available_memory     = optional(string, "256M")
-    available_cpu        = optional(string, "1")
-    timeout_seconds      = optional(number, 60)
-    min_instances        = optional(number, 0)
-    max_instances        = optional(number, 100)
-    env_vars             = optional(map(string), {})
-    secret_env_vars      = optional(list(object({
-      key    = string
-      secret = string
+    region           = string
+    runtime          = string
+    entry_point      = string
+    source_dir       = string
+    available_memory = optional(string, "256M")
+    available_cpu    = optional(string, "1")
+    timeout_seconds  = optional(number, 60)
+    min_instances    = optional(number, 0)
+    max_instances    = optional(number, 100)
+    env_vars         = optional(map(string), {})
+    secret_env_vars = optional(list(object({
+      key     = string
+      secret  = string
       version = optional(string, "latest")
     })), [])
-    trigger_http         = optional(bool, false)
-    trigger_event_type   = optional(string, null)
-    trigger_pubsub_topic = optional(string, null)
+    trigger_http          = optional(bool, false)
+    trigger_event_type    = optional(string, null)
+    trigger_pubsub_topic  = optional(string, null)
     allow_unauthenticated = optional(bool, false)
-    custom_labels        = optional(map(string), {})
+    custom_labels         = optional(map(string), {})
   }))
   default = {}
 }
