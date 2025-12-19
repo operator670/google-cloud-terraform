@@ -110,3 +110,9 @@ variable "iam_bindings" {
   }))
   default = []
 }
+
+variable "folders" {
+  description = "List of folders to create in the bucket"
+  type        = list(string)
+  default     = []
+}

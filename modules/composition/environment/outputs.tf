@@ -25,7 +25,7 @@ output "database_connection_names" {
 
 output "bucket_urls" {
   description = "Map of bucket URLs"
-  value       = { for k, v in module.storage_buckets : k => v.url }
+  value       = { for k, v in module.storage_buckets : k => v.bucket_url }
 }
 
 output "gke_cluster_endpoints" {

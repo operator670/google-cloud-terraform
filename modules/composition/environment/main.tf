@@ -2,10 +2,9 @@ locals {
   common_labels = merge(
     var.labels,
     {
-      environment   = var.environment
-      customer      = var.customer_name
-      managed_by    = "terraform"
-      deployed_date = formatdate("YYYY-MM-DD", timestamp())
+      environment = var.environment
+      customer    = var.customer_name
+      managed_by  = "terraform"
     }
   )
 
@@ -17,11 +16,11 @@ module "networking" {
   source = "../../global/networking"
 
   project_id = var.project_id
-  
+
   # VPC
   network_name = var.network_name
   description  = "VPC for ${local.resource_prefix}"
-  
+
   # Subnets
   subnets = [
     {
@@ -31,7 +30,7 @@ module "networking" {
       subnet_private_access = true
       subnet_flow_logs      = true # P3 Enhancement
       description           = "Primary subnet for ${var.environment}"
-      secondary_ranges      = [
+      secondary_ranges = [
         {
           range_name    = "gke-pods"
           ip_cidr_range = "10.48.0.0/14"
@@ -55,10 +54,10 @@ module "networking" {
       allow = [{
         protocol = "tcp"
         ports    = ["0-65535"]
-      }, {
+        }, {
         protocol = "udp"
         ports    = ["0-65535"]
-      }, {
+        }, {
         protocol = "icmp"
       }]
     },
@@ -132,7 +131,7 @@ module "compute_instances" {
   additional_disks = each.value.additional_disks
 
   # Snapshot configuration
-  enable_snapshots  = each.value.enable_snapshots
+  enable_snapshots = each.value.enable_snapshots
   snapshot_schedule = each.value.enable_snapshots ? {
     name              = "${local.resource_prefix}-${each.key}-snapshot"
     description       = "Snapshots for ${each.key}"
@@ -140,7 +139,7 @@ module "compute_instances" {
     retention_days    = each.value.snapshot_retention_days
     storage_locations = [var.primary_region]
   } : null
-  
+
   # Reuse existing snapshot schedule if ID provided
   snapshot_schedule_id = each.value.snapshot_schedule_id
 
@@ -162,7 +161,7 @@ module "compute_instances" {
   service_account_scopes = ["cloud-platform"]
 
   deletion_protection = each.value.deletion_protection
-  
+
   depends_on = [module.networking, module.iam]
 }
 
@@ -207,9 +206,10 @@ module "storage_buckets" {
   force_destroy      = each.value.delete_contents_on_destroy # P2
   labels             = merge(local.common_labels, each.value.custom_labels)
 
-  lifecycle_rules = each.value.lifecycle_rules
-  iam_bindings    = each.value.iam_bindings
+  lifecycle_rules  = each.value.lifecycle_rules
+  iam_bindings     = each.value.iam_bindings
   retention_policy = each.value.retention_policy
+  folders          = each.value.folders
 }
 
 # GKE Clusters
@@ -245,8 +245,8 @@ module "gke_clusters" {
 
 # Cloud Functions
 module "cloud_functions" {
-  for_each = var.cloud_functions
-  source   = "../../regional/cloud-functions"
+  for_each              = var.cloud_functions
+  source                = "../../regional/cloud-functions"
   project_id            = var.project_id
   region                = each.value.region
   function_name         = each.key

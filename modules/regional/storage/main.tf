@@ -65,3 +65,12 @@ resource "google_storage_bucket_iam_binding" "bindings" {
   role    = each.value.role
   members = each.value.members
 }
+
+# Create Folders
+resource "google_storage_bucket_object" "folders" {
+  for_each = toset(var.folders)
+
+  name    = endswith(each.value, "/") ? each.value : "${each.value}/"
+  content = " " # Empty content
+  bucket  = google_storage_bucket.main.name
+}
