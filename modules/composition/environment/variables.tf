@@ -27,51 +27,98 @@ variable "labels" {
 }
 
 # Networking
+variable "networks" {
+  description = "Map of VPC networks to create"
+  type = map(object({
+    network_name            = string
+    auto_create_subnetworks = optional(bool, false)
+    routing_mode            = optional(string, "GLOBAL")
+    # Let's simplify the type to match what we need
+    subnets = list(object({
+      subnet_name           = string
+      subnet_ip             = string
+      subnet_region         = string
+      subnet_private_access = optional(bool, true)
+      subnet_flow_logs      = optional(bool, false)
+      description           = optional(string, "")
+      secondary_ranges = optional(list(object({
+        range_name    = string
+        ip_cidr_range = string
+      })), [])
+    }))
+    enable_nat = optional(bool, false)
+  }))
+  default = {}
+}
+
 variable "network_name" {
-  description = "VPC network name"
+  description = "Legacy VPC network name (used if var.networks is empty)"
   type        = string
+  default     = ""
 }
 
 variable "subnet_cidr" {
-  description = "Subnet CIDR range"
+  description = "Legacy Subnet CIDR range (used if var.networks is empty)"
   type        = string
   default     = "10.0.0.0/24"
 }
 
 variable "enable_nat" {
-  description = "Enable Cloud NAT"
+  description = "Legacy Enable Cloud NAT (used if var.networks is empty)"
   type        = bool
   default     = true
 }
 
-variable "custom_firewall_rules" {
-  description = "List of custom firewall rules to add to the base rules"
+variable "subnets" {
+  description = "Legacy List of subnets (used if var.networks is empty)"
   type = list(object({
-    name                    = string
-    description             = optional(string, "")
-    direction               = string
-    priority                = optional(number, 1000)
-    ranges                  = optional(list(string), [])
-    source_tags             = optional(list(string), [])
-    source_service_accounts = optional(list(string), [])
-    target_tags             = optional(list(string), [])
-    target_service_accounts = optional(list(string), [])
-    allow = optional(list(object({
-      protocol = string
-      ports    = optional(list(string), [])
-    })), [])
-    deny = optional(list(object({
-      protocol = string
-      ports    = optional(list(string), [])
+    subnet_name           = string
+    subnet_ip             = string
+    subnet_region         = string
+    subnet_private_access = optional(bool, true)
+    subnet_flow_logs      = optional(bool, false)
+    description           = optional(string, "")
+    secondary_ranges = optional(list(object({
+      range_name    = string
+      ip_cidr_range = string
     })), [])
   }))
   default = []
+}
+
+variable "firewall_policies" {
+  description = "Map of firewall policies to create, each explicitly targeting a network"
+  type = map(object({
+    network_key = string
+    rules = list(object({
+      name                    = string
+      description             = optional(string, "")
+      direction               = string
+      priority                = optional(number, 1000)
+      ranges                  = optional(list(string), [])
+      source_tags             = optional(list(string), [])
+      source_service_accounts = optional(list(string), [])
+      target_tags             = optional(list(string), [])
+      target_service_accounts = optional(list(string), [])
+      allow = optional(list(object({
+        protocol = string
+        ports    = optional(list(string), [])
+      })), [])
+      deny = optional(list(object({
+        protocol = string
+        ports    = optional(list(string), [])
+      })), [])
+    }))
+  }))
+  default = {}
 }
 
 # Compute
 variable "compute_instances" {
   description = "Map of compute instances to create"
   type = map(object({
+    network_key  = optional(string, "default")
+    subnet_name  = optional(string, null)
     zone         = string
     machine_type = string
     disk_size_gb = number
@@ -93,6 +140,7 @@ variable "compute_instances" {
     custom_tags             = optional(list(string), [])
     custom_labels           = optional(map(string), {})
     is_spot                 = optional(bool, false)
+    instance_name           = optional(string, null)
   }))
   default = {}
 }
@@ -136,6 +184,7 @@ variable "storage_buckets" {
 variable "databases" {
   description = "Map of Cloud SQL databases to create"
   type = map(object({
+    network_key           = optional(string, "default")
     region                = string
     database_version      = string
     tier                  = string
@@ -175,6 +224,8 @@ variable "databases" {
 variable "gke_clusters" {
   description = "Map of GKE clusters to create"
   type = map(object({
+    network_key            = optional(string, "default")
+    subnet_name            = optional(string, null)
     region                 = string
     pods_ip_range_name     = string
     services_ip_range_name = string

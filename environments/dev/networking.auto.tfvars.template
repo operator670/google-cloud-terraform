@@ -1,0 +1,48 @@
+# Multi-VPC and Multi-Subnet Configuration Template
+# Use this to define multiple isolated networks within your environment
+
+networks = {
+  "vpc-1" = {
+    network_name = "customer1-dev-vpc-1"
+    enable_nat   = true
+    subnets = [
+      {
+        subnet_name   = "customer1-dev-vpc-1-subnet-a"
+        subnet_ip     = "10.0.1.0/24"
+        subnet_region = "asia-south1"
+      },
+      {
+        subnet_name   = "customer1-dev-vpc-1-subnet-b"
+        subnet_ip     = "10.0.2.0/24"
+        subnet_region = "asia-south1"
+      }
+    ]
+    # Note: Define firewall rules globally in firewall.auto.tfvars 
+    # instead of per-network inside the networks map.
+  }
+
+  "vpc-2" = {
+    network_name = "customer1-dev-vpc-2"
+    enable_nat   = false
+    subnets = [
+      {
+        subnet_name   = "customer1-dev-vpc-2-subnet-a"
+        subnet_ip     = "10.1.1.0/24"
+        subnet_region = "asia-south1"
+      },
+      {
+        subnet_name   = "customer1-dev-vpc-2-subnet-b"
+        subnet_ip     = "10.1.2.0/24"
+        subnet_region = "asia-south1"
+      }
+    ]
+  }
+}
+
+# Example of how to assign resources to these networks (in compute.auto.tfvars or gke.auto.tfvars):
+# compute_instances = {
+#   "web-server" = {
+#     network_key = "vpc-1"
+#     ...
+#   }
+# }
