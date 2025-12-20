@@ -1,43 +1,78 @@
 # Compute Instances Configuration Template
 # Copy this file to compute.auto.tfvars and configure your instances
-# File will be auto-loaded by Terraform (no -var-file flag needed!)
 
 compute_instances = {
-  # Example 1: Web Server with NEW snapshot schedule
-  "web-01" = {
+  # Instances in VPC-1
+  "vpc-1-instance-a" = {
+    instance_name           = "customer1-dev-web-server-a"
+    network_key             = "vpc-1"
+    subnet_name             = "customer1-dev-vpc-1-subnet-a"
     zone                    = "asia-south1-a"
     machine_type            = "e2-micro"
-    disk_size_gb            = 30
+    disk_size_gb            = 20
     disk_type               = "pd-standard"
     additional_disks        = []
     enable_snapshots        = true
-    snapshot_schedule       = "0 2 * * *"       # Create new schedule at 2 AM
+    snapshot_schedule       = "0 2 * * *"
     snapshot_retention_days = 7
-    snapshot_schedule_id    = null               # Create new schedule
-    enable_scheduling       = true
-    start_schedule          = "0 8 * * MON-FRI"
-    stop_schedule           = "0 18 * * MON-FRI"
+    snapshot_schedule_id    = null
     deletion_protection     = false
-    custom_tags             = ["http-server"]
-    custom_labels           = { role = "web" }
+    custom_tags             = ["web-server"]
+    custom_labels           = { vpc = "vpc-1", subnet = "a" }
   }
 
-  # Example 2: App Server using EXISTING snapshot schedule
-  # "app-01" = {
-  #   zone                    = "asia-south1-a"
-  #   machine_type            = "e2-medium"
-  #   disk_size_gb            = 50
-  #   disk_type               = "pd-balanced"
-  #   additional_disks        = []
-  #   enable_snapshots        = true
-  #   snapshot_schedule       = "0 2 * * *"       # Ignored when snapshot_schedule_id is set
-  #   snapshot_retention_days = 7
-  #   snapshot_schedule_id    = "projects/PROJECT_ID/regions/REGION/resourcePolicies/SCHEDULE_NAME"  # Use existing!
-  #   enable_scheduling       = false
-  #   deletion_protection     = false
-  #   custom_tags             = ["app-server"]
-  #   custom_labels           = { role = "app" }
-  # }
+  "vpc-1-instance-b" = {
+    instance_name           = "customer1-dev-web-server-b"
+    network_key             = "vpc-1"
+    subnet_name             = "customer1-dev-vpc-1-subnet-b"
+    zone                    = "asia-south1-b"
+    machine_type            = "e2-micro"
+    disk_size_gb            = 20
+    disk_type               = "pd-standard"
+    additional_disks        = []
+    enable_snapshots        = false
+    snapshot_schedule       = "0 2 * * *"
+    snapshot_retention_days = 7
+    snapshot_schedule_id    = null
+    deletion_protection     = false
+    custom_tags             = ["web-server"]
+    custom_labels           = { vpc = "vpc-1", subnet = "b" }
+  }
 
-  # Add more instances as needed
+  # Instances in VPC-2
+  "vpc-2-instance-a" = {
+    instance_name           = "customer1-dev-app-server-a"
+    network_key             = "vpc-2"
+    subnet_name             = "customer1-dev-vpc-2-subnet-a"
+    zone                    = "asia-south1-a"
+    machine_type            = "e2-micro"
+    disk_size_gb            = 20
+    disk_type               = "pd-standard"
+    additional_disks        = []
+    enable_snapshots        = true
+    snapshot_schedule       = "0 2 * * *"
+    snapshot_retention_days = 7
+    snapshot_schedule_id    = null
+    deletion_protection     = false
+    custom_tags             = ["app-server"]
+    custom_labels           = { vpc = "vpc-2", subnet = "a" }
+  }
+
+  "vpc-2-instance-b" = {
+    instance_name           = "customer1-dev-app-server-b"
+    network_key             = "vpc-2"
+    subnet_name             = "customer1-dev-vpc-2-subnet-b"
+    zone                    = "asia-south1-b"
+    machine_type            = "e2-micro"
+    disk_size_gb            = 20
+    disk_type               = "pd-standard"
+    additional_disks        = []
+    enable_snapshots        = false
+    snapshot_schedule       = "0 2 * * *"
+    snapshot_retention_days = 7
+    snapshot_schedule_id    = null
+    deletion_protection     = false
+    custom_tags             = ["app-server"]
+    custom_labels           = { vpc = "vpc-2", subnet = "b" }
+  }
 }

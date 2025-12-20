@@ -37,52 +37,19 @@ resource "google_compute_subnetwork" "subnets" {
   }
 }
 
-# Firewall Rules
-resource "google_compute_firewall" "rules" {
-  for_each = { for rule in var.firewall_rules : rule.name => rule }
-
-  name                    = each.value.name
-  project                 = var.project_id
-  network                 = google_compute_network.vpc.name
-  description             = each.value.description
-  direction               = each.value.direction
-  priority                = each.value.priority
-  source_ranges           = each.value.direction == "INGRESS" ? each.value.ranges : null
-  destination_ranges      = each.value.direction == "EGRESS" ? each.value.ranges : null
-  source_tags             = length(each.value.source_tags) > 0 ? each.value.source_tags : null
-  source_service_accounts = length(each.value.source_service_accounts) > 0 ? each.value.source_service_accounts : null
-  target_tags             = length(each.value.target_tags) > 0 ? each.value.target_tags : null
-  target_service_accounts = length(each.value.target_service_accounts) > 0 ? each.value.target_service_accounts : null
-
-  dynamic "allow" {
-    for_each = each.value.allow
-    content {
-      protocol = allow.value.protocol
-      ports    = allow.value.ports
-    }
-  }
-
-  dynamic "deny" {
-    for_each = each.value.deny
-    content {
-      protocol = deny.value.protocol
-      ports    = deny.value.ports
-    }
-  }
-}
 
 # Routes
 resource "google_compute_route" "routes" {
   for_each = { for route in var.routes : route.name => route }
 
-  name              = each.value.name
-  project           = var.project_id
-  network           = google_compute_network.vpc.name
-  description       = each.value.description
-  dest_range        = each.value.dest_range
-  next_hop_gateway  = each.value.next_hop_internet ? "default-internet-gateway" : each.value.next_hop_gateway
-  priority          = each.value.priority
-  tags              = each.value.tags
+  name             = each.value.name
+  project          = var.project_id
+  network          = google_compute_network.vpc.name
+  description      = each.value.description
+  dest_range       = each.value.dest_range
+  next_hop_gateway = each.value.next_hop_internet ? "default-internet-gateway" : each.value.next_hop_gateway
+  priority         = each.value.priority
+  tags             = each.value.tags
 }
 
 # Cloud Router (for Cloud NAT)
@@ -110,19 +77,4 @@ resource "google_compute_router_nat" "nat" {
     enable = var.nat_log_config_enable
     filter = var.nat_log_config_filter
   }
-}
-# Default Deny Ingress Rule (Hardening)
-resource "google_compute_firewall" "deny_all" {
-  name        = "${var.network_name}-deny-all-ingress"
-  project     = var.project_id
-  network     = google_compute_network.vpc.name
-  description = "Hardening rule: Explicitly deny all ingress traffic not permitted by other rules"
-  priority    = 65535
-  direction   = "INGRESS"
-
-  deny {
-    protocol = "all"
-  }
-
-  source_ranges = ["0.0.0.0/0"]
 }

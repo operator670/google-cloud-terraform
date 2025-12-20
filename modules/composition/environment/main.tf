@@ -9,45 +9,69 @@ locals {
   )
 
   resource_prefix = "${var.customer_name}-${var.environment}"
+
+  # Merge legacy networking into the new networks structure if networks is empty
+  merged_networks = length(var.networks) > 0 ? var.networks : {
+    "default" = {
+      network_name            = var.network_name != "" ? var.network_name : "${local.resource_prefix}-vpc"
+      auto_create_subnetworks = false
+      routing_mode            = "GLOBAL"
+      subnets = length(var.subnets) > 0 ? var.subnets : [
+        {
+          subnet_name           = "${local.resource_prefix}-subnet-${var.primary_region}"
+          subnet_ip             = var.subnet_cidr
+          subnet_region         = var.primary_region
+          subnet_private_access = true
+          subnet_flow_logs      = true
+          description           = "Primary subnet for ${var.environment}"
+          secondary_ranges = [
+            {
+              range_name    = "gke-pods"
+              ip_cidr_range = "10.48.0.0/14"
+            },
+            {
+              range_name    = "gke-services"
+              ip_cidr_range = "10.52.0.0/20"
+            }
+          ]
+        }
+      ]
+      enable_nat = var.enable_nat
+    }
+  }
 }
 
 # Networking Module
 module "networking" {
-  source = "../../global/networking"
+  for_each = local.merged_networks
+  source   = "../../global/networking"
 
   project_id = var.project_id
 
   # VPC
-  network_name = var.network_name
-  description  = "VPC for ${local.resource_prefix}"
+  network_name = each.value.network_name
+  description  = "VPC ${each.key} for ${local.resource_prefix}"
 
   # Subnets
-  subnets = [
-    {
-      subnet_name           = "${local.resource_prefix}-subnet-${var.primary_region}"
-      subnet_ip             = var.subnet_cidr
-      subnet_region         = var.primary_region
-      subnet_private_access = true
-      subnet_flow_logs      = true # P3 Enhancement
-      description           = "Primary subnet for ${var.environment}"
-      secondary_ranges = [
-        {
-          range_name    = "gke-pods"
-          ip_cidr_range = "10.48.0.0/14"
-        },
-        {
-          range_name    = "gke-services"
-          ip_cidr_range = "10.52.0.0/20"
-        }
-      ]
-    }
-  ]
+  subnets = each.value.subnets
 
-  # Firewall Rules
-  firewall_rules = concat([
+  # Cloud NAT
+  enable_nat  = each.value.enable_nat
+  nat_regions = each.value.enable_nat ? [var.primary_region] : []
+}
+
+# Firewall Baseline (Applied to all VPCs)
+module "firewall_baseline" {
+  for_each = local.merged_networks
+  source   = "../../global/firewall"
+
+  project_id   = var.project_id
+  network_name = module.networking[each.key].network_name
+
+  firewall_rules = [
     {
-      name        = "${local.resource_prefix}-allow-internal"
-      description = "Allow internal traffic"
+      name        = "${local.resource_prefix}-${each.key}-allow-internal"
+      description = "Allow internal traffic in ${each.key}"
       direction   = "INGRESS"
       source_tags = ["${var.environment}"]
       target_tags = ["${var.environment}"]
@@ -62,8 +86,8 @@ module "networking" {
       }]
     },
     {
-      name        = "${local.resource_prefix}-allow-ssh"
-      description = "Allow SSH from IAP"
+      name        = "${local.resource_prefix}-${each.key}-allow-ssh"
+      description = "Allow SSH from IAP in ${each.key}"
       direction   = "INGRESS"
       ranges      = ["35.235.240.0/20"]
       target_tags = ["ssh"]
@@ -72,11 +96,21 @@ module "networking" {
         ports    = ["22"]
       }]
     }
-  ], var.custom_firewall_rules)
+  ]
 
-  # Cloud NAT
-  enable_nat  = var.enable_nat
-  nat_regions = var.enable_nat ? [var.primary_region] : []
+  enable_deny_all_ingress = true
+}
+
+# Firewall Policies (Custom rules explicitly targeted)
+module "firewall_custom" {
+  for_each = var.firewall_policies
+  source   = "../../global/firewall"
+
+  project_id   = var.project_id
+  network_name = module.networking[each.value.network_key].network_name
+
+  firewall_rules          = each.value.rules
+  enable_deny_all_ingress = false # Managed by baseline
 }
 
 # IAM Module
@@ -119,7 +153,7 @@ module "compute_instances" {
   project_id    = var.project_id
   region        = var.primary_region
   zone          = each.value.zone
-  instance_name = "${local.resource_prefix}-${each.key}"
+  instance_name = coalesce(each.value.instance_name, "${local.resource_prefix}-${each.key}")
   machine_type  = each.value.machine_type
   is_spot       = each.value.is_spot # P2
 
@@ -151,8 +185,8 @@ module "compute_instances" {
     timezone       = "Asia/Kolkata"
   } : null
 
-  network    = module.networking.network_name
-  subnetwork = module.networking.subnet_names["${local.resource_prefix}-subnet-${var.primary_region}"]
+  network    = module.networking[each.value.network_key].network_name
+  subnetwork = module.networking[each.value.network_key].subnet_names[coalesce(each.value.subnet_name, "${local.resource_prefix}-subnet-${var.primary_region}")]
 
   tags   = concat(["ssh", var.environment], each.value.custom_tags)
   labels = merge(local.common_labels, each.value.custom_labels)
@@ -162,7 +196,7 @@ module "compute_instances" {
 
   deletion_protection = each.value.deletion_protection
 
-  depends_on = [module.networking, module.iam]
+  depends_on = [module.networking, module.iam, module.firewall_baseline, module.firewall_custom]
 }
 
 # Databases
@@ -176,7 +210,7 @@ module "databases" {
   database_version = each.value.database_version
   tier             = each.value.tier
 
-  network = module.networking.network_self_link
+  network = module.networking[each.value.network_key].network_self_link
 
   ha_enabled            = each.value.ha_enabled
   backup_enabled        = each.value.backup_enabled
@@ -189,7 +223,7 @@ module "databases" {
   databases = each.value.databases
   users     = each.value.users
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, module.firewall_baseline, module.firewall_custom]
 }
 
 # Storage Buckets
@@ -221,8 +255,8 @@ module "gke_clusters" {
   region       = each.value.region
   cluster_name = "${local.resource_prefix}-${each.key}"
 
-  network    = module.networking.network_name
-  subnetwork = module.networking.subnet_names["${local.resource_prefix}-subnet-${each.value.region}"]
+  network    = module.networking[each.value.network_key].network_name
+  subnetwork = module.networking[each.value.network_key].subnet_names[coalesce(each.value.subnet_name, "${local.resource_prefix}-subnet-${each.value.region}")]
 
   pods_ip_range_name     = each.value.pods_ip_range_name
   services_ip_range_name = each.value.services_ip_range_name
@@ -240,7 +274,7 @@ module "gke_clusters" {
 
   labels = merge(local.common_labels, each.value.custom_labels)
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, module.firewall_baseline, module.firewall_custom]
 }
 
 # Cloud Functions
