@@ -8,11 +8,11 @@ Configuration is split into domain-specific files for clarity:
 
 | File | Purpose |
 | :--- | :--- |
-| `common.auto.tfvars` | Project ID, Region, Labels |
+| `common.auto.tfvars` | Project ID, Region, Labels, NCC Hub settings |
 | `compute.auto.tfvars` | VM definitions, Spot settings, Schedules |
 | `database.auto.tfvars` | Cloud SQL instances, Users, Passwords (via Secret ID) |
-| `networking.auto.tfvars` | NAT settings, Subnets |
-| `firewall.auto.tfvars` | **Custom** Firewall rules specific to Dev |
+| `networking.auto.tfvars` | Multi-VPC definitions, NAT settings, Subnets, NCC Spoke exclusions |
+| `firewall.auto.tfvars` | **Tiered** Firewall rules (Web -> App -> DB flow) |
 | `gke.auto.tfvars` | Kubernetes Clusters & Node Pools |
 | `storage.auto.tfvars` | GCS Buckets & Lifecycle Policies |
 

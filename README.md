@@ -52,7 +52,7 @@ We use split configuration files. **You do not edit `main.tf`**. You only edit d
 | I want to... | Edit this file |
 | :--- | :--- |
 | **Add a Virtual Machine** | `compute.auto.tfvars` |
-| **Open a Custom Port** | `firewall.auto.tfvars` (Add to `custom_firewall_rules`) |
+| **Open a Custom Port** | `firewall.auto.tfvars` (Add to `firewall_policies`) |
 | **Add a Database** | `database.auto.tfvars` |
 | **Change GKE Node Count** | `gke.auto.tfvars` |
 | **Add a Bucket** | `storage.auto.tfvars` |
@@ -74,8 +74,9 @@ terraform apply
 
 | Domain | Feature | Description |
 | :--- | :--- | :--- |
-| **Security** | **Zero-Trust Networking** | Default-Deny ingress rules enforced globally. |
-| | **Secret Management** | Database passwords fetched dynamically from GCP Secret Manager. |
+| **Networking** | **Enterprise Transit Hub** | Uses **Network Connectivity Center (NCC)** to connect multiple VPCs with tiered isolation. |
+| | **Zero-Trust Networking** | Default-Deny ingress rules enforced globally. |
+| **Security** | **Secret Management** | Database passwords fetched dynamically from GCP Secret Manager. |
 | | **Non-Destructive IAM** | IAM managed via `_member` resources to coexist with manual grants. |
 | **Cost** | **Spot Instances** | Native support for Spot VMs (`is_spot = true`) for non-prod workloads. |
 | | **Scheduling** | Automated start/stop schedules for development resources. |
@@ -92,7 +93,7 @@ Infrastructure drift occurs when resources are modified manually in the Cloud Co
 #### Scenario 1: Legitimate Changes (Codify)
 If a manual change (e.g., a hotfix firewall rule) needs to be permanent:
 1.  **Identify**: Run `terraform plan` to see what Terraform wants to undo.
-2.  **Codify**: Update the corresponding `.auto.tfvars` file (e.g., add to `custom_firewall_rules`) to match the console reality.
+2.  **Codify**: Update the corresponding `.auto.tfvars` file (e.g., add to `firewall_policies`) to match the console reality.
 3.  **Verify**: Run `terraform plan` again. It should say "No changes".
 
 #### Scenario 2: Unauthorized Changes (Remediate)
@@ -113,6 +114,6 @@ If a change was accidental or unauthorized:
 │   ├── dev/                  # <--- You work here
 │   ├── staging/              
 │   └── prod/                 
-├── backend-configs/          # State Bucket Configs (Not in Git)
+├── backend-configs/          # State Bucket Configs
 └── scripts/                  
 ```
