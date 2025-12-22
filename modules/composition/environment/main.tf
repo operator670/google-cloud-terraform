@@ -36,7 +36,8 @@ locals {
           ]
         }
       ]
-      enable_nat = var.enable_nat
+      enable_nat       = var.enable_nat
+      exclude_from_ncc = false
     }
   }
 }
@@ -299,6 +300,20 @@ module "cloud_functions" {
   trigger_pubsub_topic  = each.value.trigger_pubsub_topic
   allow_unauthenticated = each.value.allow_unauthenticated
   labels                = merge(var.labels, each.value.custom_labels)
+}
+
+# Network Connectivity Center (Transit Hub)
+module "ncc" {
+  count  = var.enable_ncc ? 1 : 0
+  source = "../../global/ncc"
+
+  project_id = var.project_id
+  hub_name   = var.ncc_hub_name
+
+  vpc_spokes = {
+    for k, v in module.networking : k => v.network_self_link
+    if !lookup(local.merged_networks[k], "exclude_from_ncc", false)
+  }
 }
 # Note on Cloud Functions/Run: I've omitted them from the blueprint momentarily to focus on the core modules we definitely have. 
 # If they were direct resources in the dev environment, they should be moved here as resources, not module calls.

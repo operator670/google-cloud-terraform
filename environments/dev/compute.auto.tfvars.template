@@ -1,78 +1,66 @@
 # Compute Instances Configuration Template
-# Copy this file to compute.auto.tfvars and configure your instances
+# Defines instances across the multi-tier NCC architecture
 
 compute_instances = {
-  # Instances in VPC-1
-  "vpc-1-instance-a" = {
-    instance_name           = "customer1-dev-web-server-a"
-    network_key             = "vpc-1"
-    subnet_name             = "customer1-dev-vpc-1-subnet-a"
+  # --- Management Tier ---
+  "trust-mgmt-vm" = {
+    instance_name           = "customer1-dev-trust-mgmt"
+    network_key             = "trust"
+    subnet_name             = "trust-subnet"
     zone                    = "asia-south1-a"
     machine_type            = "e2-micro"
     disk_size_gb            = 20
     disk_type               = "pd-standard"
     additional_disks        = []
-    enable_snapshots        = true
-    snapshot_schedule       = "0 2 * * *"
-    snapshot_retention_days = 7
-    snapshot_schedule_id    = null
-    deletion_protection     = false
-    custom_tags             = ["web-server"]
-    custom_labels           = { vpc = "vpc-1", subnet = "a" }
-  }
-
-  "vpc-1-instance-b" = {
-    instance_name           = "customer1-dev-web-server-b"
-    network_key             = "vpc-1"
-    subnet_name             = "customer1-dev-vpc-1-subnet-b"
-    zone                    = "asia-south1-b"
-    machine_type            = "e2-micro"
-    disk_size_gb            = 20
-    disk_type               = "pd-standard"
-    additional_disks        = []
     enable_snapshots        = false
-    snapshot_schedule       = "0 2 * * *"
-    snapshot_retention_days = 7
-    snapshot_schedule_id    = null
     deletion_protection     = false
-    custom_tags             = ["web-server"]
-    custom_labels           = { vpc = "vpc-1", subnet = "b" }
+    custom_tags             = ["mgmt-server"]
+    custom_labels           = { tier = "trust" }
   }
 
-  # Instances in VPC-2
-  "vpc-2-instance-a" = {
-    instance_name           = "customer1-dev-app-server-a"
-    network_key             = "vpc-2"
-    subnet_name             = "customer1-dev-vpc-2-subnet-a"
+  # --- Tiered App Infrastructure ---
+  "web-a-vm" = {
+    instance_name           = "customer1-dev-web-a-vm"
+    network_key             = "web-a"
+    subnet_name             = "web-a-subnet"
     zone                    = "asia-south1-a"
     machine_type            = "e2-micro"
     disk_size_gb            = 20
     disk_type               = "pd-standard"
     additional_disks        = []
-    enable_snapshots        = true
-    snapshot_schedule       = "0 2 * * *"
-    snapshot_retention_days = 7
-    snapshot_schedule_id    = null
+    enable_snapshots        = false
     deletion_protection     = false
-    custom_tags             = ["app-server"]
-    custom_labels           = { vpc = "vpc-2", subnet = "a" }
+    custom_tags             = ["web-server"]
+    custom_labels           = { tier = "web", env = "a" }
   }
 
-  "vpc-2-instance-b" = {
-    instance_name           = "customer1-dev-app-server-b"
-    network_key             = "vpc-2"
-    subnet_name             = "customer1-dev-vpc-2-subnet-b"
-    zone                    = "asia-south1-b"
+  "app-a-vm" = {
+    instance_name           = "customer1-dev-app-a-vm"
+    network_key             = "app-a"
+    subnet_name             = "app-a-subnet"
+    zone                    = "asia-south1-a"
     machine_type            = "e2-micro"
     disk_size_gb            = 20
     disk_type               = "pd-standard"
     additional_disks        = []
     enable_snapshots        = false
-    snapshot_schedule       = "0 2 * * *"
-    snapshot_retention_days = 7
-    snapshot_schedule_id    = null
     deletion_protection     = false
     custom_tags             = ["app-server"]
-    custom_labels           = { vpc = "vpc-2", subnet = "b" }
+    custom_labels           = { tier = "app", env = "a" }
+  }
+
+  "db-a-vm" = {
+    instance_name           = "customer1-dev-db-a-vm"
+    network_key             = "db-a"
+    subnet_name             = "db-a-subnet"
+    zone                    = "asia-south1-a"
+    machine_type            = "e2-micro"
+    disk_size_gb            = 20
+    disk_type               = "pd-standard"
+    additional_disks        = []
+    enable_snapshots        = false
+    deletion_protection     = false
+    custom_tags             = ["db-server"]
+    custom_labels           = { tier = "db", env = "a" }
   }
 }

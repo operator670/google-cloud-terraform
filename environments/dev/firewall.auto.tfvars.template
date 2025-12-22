@@ -1,61 +1,114 @@
-# Firewall Policies managed by Security Team
-# Each policy explicitly targets a VPC network by its key
+# Strict Tiered Firewall Policies
+# Enforces isolation: Web -> App -> Database
 
 firewall_policies = {
-  "vpc-1-rules" = {
-    network_key = "vpc-1"
+  # --- TRUST VPC ---
+  "trust-rules" = {
+    network_key = "trust"
     rules = [
       {
-        name        = "allow-ssh-vpc-1"
-        description = "Allow SSH to vpc-1"
+        name        = "trust-allow-internal-vpcs"
+        description = "Allow traffic from all internal tiered VPCs"
         direction   = "INGRESS"
-        ranges      = ["0.0.0.0/0"]
-        target_tags = ["ssh"]
-        allow = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
+        ranges      = [
+          "10.1.0.0/24", # Web A
+          "10.2.0.0/24", # App A
+          "10.3.0.0/24", # DB A
+          "10.4.0.0/24", # Web B
+          "10.5.0.0/24", # App B
+          "10.6.0.0/24"  # DB B
         ]
-      },
-      {
-        name        = "allow-http-vpc-1"
-        description = "Allow HTTP to vpc-1"
-        direction   = "INGRESS"
-        ranges      = ["0.0.0.0/0"]
-        target_tags = ["http-server"]
-        allow = [
-          {
-            protocol = "tcp"
-            ports    = ["80"]
-          }
-        ]
+        allow = [{ protocol = "tcp", ports = ["0-65535"] }]
       }
     ]
   }
 
-  "vpc-2-rules" = {
-    network_key = "vpc-2"
+  # --- WEB VPCs ---
+  "web-a-rules" = {
+    network_key = "web-a"
     rules = [
       {
-        name        = "allow-icmp-vpc-2"
-        description = "Allow ICMP to vpc-2"
+        name        = "web-a-allow-trust"
+        description = "Allow Management from Trust VPC"
         direction   = "INGRESS"
-        ranges      = ["10.0.0.0/8"]
-        allow = [{ protocol = "icmp" }]
+        ranges      = ["10.0.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["22", "80", "443"] }]
+      }
+    ]
+  }
+
+  # --- APP VPCs ---
+  "app-a-rules" = {
+    network_key = "app-a"
+    rules = [
+      {
+        name        = "app-a-allow-web-a"
+        description = "Allow traffic from Web A"
+        direction   = "INGRESS"
+        ranges      = ["10.1.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["8080"] }]
       },
       {
-        name        = "allow-app-vpc-2"
-        description = "Allow internal app traffic on port 8080"
+        name        = "app-a-allow-app-b"
+        description = "Allow cross-environment App communication"
         direction   = "INGRESS"
-        ranges      = ["10.1.0.0/16"]
-        target_tags = ["app-server"]
-        allow = [
-          {
-            protocol = "tcp"
-            ports    = ["8080"]
-          }
-        ]
+        ranges      = ["10.5.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["0-65535"] }]
+      },
+      {
+        name        = "app-a-allow-trust"
+        description = "Allow Management from Trust VPC"
+        direction   = "INGRESS"
+        ranges      = ["10.0.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["22"] }]
+      }
+    ]
+  }
+
+  "app-b-rules" = {
+    network_key = "app-b"
+    rules = [
+      {
+        name        = "app-b-allow-web-b"
+        description = "Allow traffic from Web B"
+        direction   = "INGRESS"
+        ranges      = ["10.4.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["8080"] }]
+      },
+      {
+        name        = "app-b-allow-app-a"
+        description = "Allow cross-environment App communication"
+        direction   = "INGRESS"
+        ranges      = ["10.2.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["0-65535"] }]
+      },
+      {
+        name        = "app-b-allow-trust"
+        description = "Allow Management from Trust VPC"
+        direction   = "INGRESS"
+        ranges      = ["10.0.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["22"] }]
+      }
+    ]
+  }
+
+  # --- DATABASE VPCs ---
+  "db-a-rules" = {
+    network_key = "db-a"
+    rules = [
+      {
+        name        = "db-a-allow-app-a"
+        description = "Allow SQL traffic from App A"
+        direction   = "INGRESS"
+        ranges      = ["10.2.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["5432", "3306"] }]
+      },
+      {
+        name        = "db-a-allow-trust"
+        description = "Allow Management from Trust VPC"
+        direction   = "INGRESS"
+        ranges      = ["10.0.0.0/24"]
+        allow       = [{ protocol = "tcp", ports = ["22"] }]
       }
     ]
   }

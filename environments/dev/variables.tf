@@ -30,6 +30,18 @@ variable "labels" {
   default     = {}
 }
 
+variable "enable_ncc" {
+  description = "Enable Network Connectivity Center (NCC) for transit connectivity between VPCs"
+  type        = bool
+  default     = false
+}
+
+variable "ncc_hub_name" {
+  description = "Name of the NCC Hub"
+  type        = string
+  default     = "enterprise-transit-hub"
+}
+
 # Networking Variables
 variable "networks" {
   description = "Map of VPC networks to create"
