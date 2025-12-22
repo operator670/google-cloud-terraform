@@ -6,6 +6,8 @@ module "environment" {
   environment    = var.environment
   primary_region = var.primary_region
   labels         = var.labels
+  enable_ncc     = var.enable_ncc
+  ncc_hub_name   = var.ncc_hub_name
 
   # Networking
   networks          = var.networks
@@ -19,18 +21,18 @@ module "environment" {
   compute_instances = var.compute_instances
 
   # Storage
-  storage_buckets = var.storage_buckets
+  #storage_buckets = var.storage_buckets
 
   # Databases
-  databases = var.databases
+  #databases = var.databases
 
   # GKE
-  gke_clusters = var.gke_clusters
+  #gke_clusters = var.gke_clusters
 
   # Secrets
-  secrets = var.secrets
+  #secrets = var.secrets
 
   # Cloud Run & Functions (Variables passed through, even if module logic is partial)
-  cloud_run_services = var.cloud_run_services
-  cloud_functions    = var.cloud_functions
+  #cloud_run_services = var.cloud_run_services
+  #cloud_functions    = var.cloud_functions
 }

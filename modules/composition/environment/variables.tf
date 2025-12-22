@@ -26,6 +26,18 @@ variable "labels" {
   default     = {}
 }
 
+variable "enable_ncc" {
+  description = "Enable Network Connectivity Center (NCC) for transit connectivity between VPCs"
+  type        = bool
+  default     = false
+}
+
+variable "ncc_hub_name" {
+  description = "Name of the NCC Hub"
+  type        = string
+  default     = "enterprise-transit-hub"
+}
+
 # Networking
 variable "networks" {
   description = "Map of VPC networks to create"
@@ -46,7 +58,8 @@ variable "networks" {
         ip_cidr_range = string
       })), [])
     }))
-    enable_nat = optional(bool, false)
+    enable_nat       = optional(bool, false)
+    exclude_from_ncc = optional(bool, false)
   }))
   default = {}
 }
