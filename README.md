@@ -85,6 +85,20 @@ terraform apply
 
 ---
 
+## 🔒 Infrastructure Seatbelts (Blast Radius Reduction)
+
+To prevent accidental data loss or network outages, we implement the following safety mechanisms:
+
+### 1. Hard Locks (VPCs)
+The **Networking** module uses `prevent_destroy = true`. This is a hard lock at the provider level. To delete a VPC, you must manually unlock the module code (`modules/global/networking/main.tf`).
+
+### 2. Guardrails (Compute & Databases)
+Resources like VMs and SQL Instances have `deletion_protection = true` by default.
+
+-   **To delete a specific resource**: Set `deletion_protection = false` in your `.auto.tfvars` file, run `apply` once to unlock it, and then you can safely remove the resource.
+
+---
+
 ## ⚙️ Operational Governance
 
 ### Handling Manual Changes ("Drift")
@@ -100,6 +114,19 @@ If a manual change (e.g., a hotfix firewall rule) needs to be permanent:
 If a change was accidental or unauthorized:
 1.  **Run Apply**: `terraform apply`.
 2.  **Result**: Terraform will strictly revert the resource to its defined state (e.g., closing an unauthorized port).
+
+---
+
+---
+
+## 📖 Documentation Hub
+
+For a deeper dive into the architectural decisions and technical governance of this project, see:
+
+- [Architecture Overview](file:///home/sarthak/terraform-codebase/docs/architecture-overview.md): The "Composition Blueprint" explained.
+- [Comparison of Approaches](file:///home/sarthak/terraform-codebase/docs/comparison-of-approaches.md): Blueprint vs. Service Silos.
+- [Blast Radius Management](file:///home/sarthak/terraform-codebase/docs/blast-radius-management.md): How we stay safe in a unified state.
+- [Target Customer Profiles](file:///home/sarthak/terraform-codebase/docs/target-customer-profiles.md): Who is this codebase built for?
 
 ---
 
