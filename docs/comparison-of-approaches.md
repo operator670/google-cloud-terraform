@@ -3,6 +3,7 @@
 When designing Terraform codebases, there is a fundamental choice between **Unified Composition** (what we use) and **Component-Based Silos**.
 
 ## 🏗️ Unified Composition (Blueprint Pattern)
+
 *All services (Networking, Compute, DB) are managed in a single state file per environment.*
 
 | Feature | Blueprint Pattern |
@@ -17,6 +18,7 @@ When designing Terraform codebases, there is a fundamental choice between **Unif
 ---
 
 ## 🏛️ Component-Based Silos (The "Silo" Approach)
+
 *Each service has its own folder and its own independent state file.*
 
 | Feature | Component Silos |
@@ -31,4 +33,5 @@ When designing Terraform codebases, there is a fundamental choice between **Unif
 ---
 
 ## ⚖️ Why We Chose Blueprints
+
 We prioritized **Speed** and **Consistency**. By using "Hard Locks" (`prevent_destroy`) and "Guardrails" (`deletion_protection`), we achieve the safety of silos without the massive operational overhead of managing disconnected state files and manual dependency tracking.

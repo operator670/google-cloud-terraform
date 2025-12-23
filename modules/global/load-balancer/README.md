@@ -1,6 +1,7 @@
 # Global Load Balancer Module
 
 This module creates global HTTP(S) load balancer resources including:
+
 - Global forwarding rules
 - Target HTTP(S) proxy
 - URL maps
@@ -56,15 +57,15 @@ module "load_balancer" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| name | Name of the load balancer | string | - | yes |
-| ssl_enabled | Enable SSL | bool | false | no |
-| backends | List of backend configurations | list(object) | [] | yes |
+| :--- | :--- | :--- | :--- | :--- |
+| `project_id` | GCP Project ID | `string` | - | yes |
+| `name` | Name of the load balancer | `string` | - | yes |
+| `ssl_enabled` | Enable SSL | `bool` | `false` | no |
+| `backends` | List of backend configurations | `list(object)` | `[]` | yes |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
-| external_ip | External IP address |
-| url_map_id | URL map ID |
+| :--- | :--- |
+| `external_ip` | External IP address |
+| `url_map_id` | URL map ID |

@@ -71,16 +71,16 @@ module "pubsub_function" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| region | GCP Region | string | - | yes |
-| function_name | Name of the function | string | - | yes |
-| runtime | Runtime (python311, nodejs20, etc) | string | - | yes |
-| entry_point | Function entry point | string | - | yes |
+| :--- | :--- | :--- | :--- | :--- |
+| `project_id` | GCP Project ID | `string` | - | yes |
+| `region` | GCP Region | `string` | - | yes |
+| `function_name` | Name of the function | `string` | - | yes |
+| `runtime` | Runtime (`python311`, `nodejs20`, etc) | `string` | - | yes |
+| `entry_point` | Function entry point | `string` | - | yes |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
-| function_uri | Function HTTP URI |
-| function_name | Function name |
+| :--- | :--- |
+| `function_uri` | Function HTTP URI |
+| `function_name` | Function name |

@@ -17,18 +17,21 @@ cd <customer-name>
 Create separate backend config files for each environment:
 
 **backend-config-dev.tfvars:**
+
 ```hcl
 bucket = "<customer-name>-terraform-state"
 prefix = "dev"
 ```
 
 **backend-config-staging.tfvars:**
+
 ```hcl
 bucket = "<customer-name>-terraform-state"
 prefix = "staging"
 ```
 
 **backend-config-prod.tfvars:**
+
 ```hcl
 bucket = "<customer-name>-terraform-state"
 prefix = "prod"
@@ -77,7 +80,7 @@ Use the helper scripts:
 
 ## File Structure
 
-```
+```text
 customer-name/
 ├── README.md                      # This file
 ├── backend-config-dev.tfvars      # Dev backend config

@@ -1,6 +1,7 @@
 # Regional Compute Module
 
 This module creates regional compute resources including:
+
 - Compute Engine instances
 - Instance templates
 - Managed Instance Groups (MIG)
@@ -30,20 +31,20 @@ module "compute" {
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| region | GCP Region (e.g., asia-south1) | string | - | yes |
-| zone | GCP Zone (e.g., asia-south1-a) | string | - | yes |
-| instance_name | Name of the instance | string | - | yes |
-| machine_type | Machine type | string | e2-medium | no |
-| network | VPC network name | string | - | yes |
-| subnetwork | Subnet name | string | - | yes |
+| Name            | Description                        | Type     | Default     | Required |
+| :-------------- | :--------------------------------- | :------- | :---------- | :------- |
+| `project_id`    | GCP Project ID                     | `string` | -           | yes      |
+| `region`        | GCP Region (e.g., asia-south1)     | `string` | -           | yes      |
+| `zone`          | GCP Zone (e.g., asia-south1-a)     | `string` | -           | yes      |
+| `instance_name` | Name of the instance               | `string` | -           | yes      |
+| `machine_type`  | Machine type                       | `string` | `e2-medium` | no       |
+| `network`       | VPC network name                   | `string` | -           | yes      |
+| `subnetwork`    | Subnet name                        | `string` | -           | yes      |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| instance_id | Instance ID |
-| instance_ip | Internal IP address |
-| instance_group_url | MIG URL |
+| Name                 | Description         |
+| :------------------- | :------------------ |
+| `instance_id`        | Instance ID         |
+| `instance_ip`        | Internal IP address |
+| `instance_group_url` | MIG URL             |

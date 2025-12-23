@@ -7,22 +7,28 @@ This repository contains the Terraform codebase for managing the Multi-Customer 
 The infrastructure adopts a **Unified Blueprint Architecture** to maximize code reuse and eliminate configuration drift.
 
 ### 1. Composition Blueprint (`modules/composition`)
+
 The core architectural logic is centralized in the `modules/composition/environment` module. This "Blueprint" defines the standard reference architecture (VPC, Compute, GKE, Databases, IAM) that is instantiated across all environments.
 
 ### 2. Environment Configurations (`environments/*`)
+
 Environments are purposefully lightweight. They consume the **Composition Blueprint** and apply environment-specific configurations via variables (e.g., machine types, cluster sizes, high-availability settings).
 
 ### 3. Service Modules (`modules/{global,regional}`)
+
 Granular, reusable modules for individual GCP services:
--   **Global**: Networking (VPC, Firewall, NAT), IAM, Secret Manager.
--   **Regional**: Compute Engine, GKE, Cloud SQL, Cloud Storage.
+
+- **Global**: Networking (VPC, Firewall, NAT), IAM, Secret Manager.
+- **Regional**: Compute Engine, GKE, Cloud SQL, Cloud Storage.
 
 ---
 
 ## 👩‍💻 Developer Workflow
 
 ### 1. Prerequisites
+
 Ensure you have the following tools installed and authenticated:
+
 ```bash
 # Authenticate gcloud
 gcloud auth application-default login
@@ -32,6 +38,7 @@ gcloud config set project YOUR-PROJECT-ID
 ```
 
 ### 2. Initial Setup
+
 We use **Partial Backend Configuration** to keep sensitive bucket names out of the code.
 
 ```bash
@@ -47,6 +54,7 @@ terraform init -backend-config=../../backend-configs/dev.tfvars
 ```
 
 ### 3. Making Changes (The `.auto.tfvars` Workflow)
+
 We use split configuration files. **You do not edit `main.tf`**. You only edit data files.
 
 | I want to... | Edit this file |
@@ -58,6 +66,7 @@ We use split configuration files. **You do not edit `main.tf`**. You only edit d
 | **Add a Bucket** | `storage.auto.tfvars` |
 
 ### 4. Deploying
+
 Always preview your changes before applying.
 
 ```bash
@@ -90,30 +99,37 @@ terraform apply
 To prevent accidental data loss or network outages, we implement the following safety mechanisms:
 
 ### 1. Hard Locks (VPCs)
+
 The **Networking** module uses `prevent_destroy = true`. This is a hard lock at the provider level. To delete a VPC, you must manually unlock the module code (`modules/global/networking/main.tf`).
 
 ### 2. Guardrails (Compute & Databases)
+
 Resources like VMs and SQL Instances have `deletion_protection = true` by default.
 
--   **To delete a specific resource**: Set `deletion_protection = false` in your `.auto.tfvars` file, run `apply` once to unlock it, and then you can safely remove the resource.
+- **To delete a specific resource**: Set `deletion_protection = false` in your `.auto.tfvars` file, run `apply` once to unlock it, and then you can safely remove the resource.
 
 ---
 
 ## ⚙️ Operational Governance
 
 ### Handling Manual Changes ("Drift")
+
 Infrastructure drift occurs when resources are modified manually in the Cloud Console, causing a divergence from the Terraform state.
 
 #### Scenario 1: Legitimate Changes (Codify)
+
 If a manual change (e.g., a hotfix firewall rule) needs to be permanent:
-1.  **Identify**: Run `terraform plan` to see what Terraform wants to undo.
-2.  **Codify**: Update the corresponding `.auto.tfvars` file (e.g., add to `firewall_policies`) to match the console reality.
-3.  **Verify**: Run `terraform plan` again. It should say "No changes".
+
+1. **Identify**: Run `terraform plan` to see what Terraform wants to undo.
+2. **Codify**: Update the corresponding `.auto.tfvars` file (e.g., add to `firewall_policies`) to match the console reality.
+3. **Verify**: Run `terraform plan` again. It should say "No changes".
 
 #### Scenario 2: Unauthorized Changes (Remediate)
+
 If a change was accidental or unauthorized:
-1.  **Run Apply**: `terraform apply`.
-2.  **Result**: Terraform will strictly revert the resource to its defined state (e.g., closing an unauthorized port).
+
+1. **Run Apply**: `terraform apply`.
+2. **Result**: Terraform will strictly revert the resource to its defined state (e.g., closing an unauthorized port).
 
 ---
 

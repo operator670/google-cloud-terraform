@@ -3,6 +3,7 @@
 This module manages Google Cloud Secret Manager secrets, versions, and IAM access.
 
 ## Features
+
 - Create secrets with automatic or user-managed replication.
 - Create secret versions (initial data).
 - Manage IAM access (Secret Manager Secret Accessor, etc.) at the secret level.
