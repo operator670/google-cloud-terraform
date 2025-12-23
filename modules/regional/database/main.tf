@@ -13,11 +13,11 @@ resource "google_sql_database_instance" "main" {
   deletion_protection = var.deletion_protection
 
   settings {
-    tier              = var.tier
-    availability_type = var.ha_enabled ? "REGIONAL" : "ZONAL"
-    disk_type         = var.disk_type
-    disk_size         = var.disk_size
-    disk_autoresize   = var.disk_autoresize
+    tier                  = var.tier
+    availability_type     = var.ha_enabled ? "REGIONAL" : "ZONAL"
+    disk_type             = var.disk_type
+    disk_size             = var.disk_size
+    disk_autoresize       = var.disk_autoresize
     disk_autoresize_limit = var.disk_autoresize_limit
 
     user_labels = var.labels
@@ -61,7 +61,7 @@ resource "google_sql_database_instance" "main" {
   }
 
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
     ignore_changes = [
       name,
     ]
@@ -95,11 +95,11 @@ resource "google_sql_user" "users" {
   name     = each.value.name
   project  = var.project_id
   instance = google_sql_database_instance.main.name
-  
+
   # Priority: 1. Plain text password (if provided) 2. Secret Manager payload 3. Error
   password = each.value.password != null ? each.value.password : data.google_secret_manager_secret_version.user_passwords[each.value.name].secret_data
-  
-  host     = each.value.host
+
+  host = each.value.host
 }
 # Read Replicas
 resource "google_sql_database_instance" "replicas" {
@@ -114,10 +114,10 @@ resource "google_sql_database_instance" "replicas" {
   deletion_protection = var.deletion_protection
 
   settings {
-    tier              = each.value.tier
-    disk_type         = coalesce(each.value.disk_type, var.disk_type)
-    disk_size         = coalesce(each.value.disk_size, var.disk_size)
-    user_labels       = merge(var.labels, coalesce(each.value.user_labels, {}))
+    tier        = each.value.tier
+    disk_type   = coalesce(each.value.disk_type, var.disk_type)
+    disk_size   = coalesce(each.value.disk_size, var.disk_size)
+    user_labels = merge(var.labels, coalesce(each.value.user_labels, {}))
 
     ip_configuration {
       ipv4_enabled    = false # Replicas typically use private IP internally

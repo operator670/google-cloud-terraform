@@ -149,7 +149,7 @@ variable "compute_instances" {
     enable_scheduling       = optional(bool, false)
     start_schedule          = optional(string, "0 8 * * MON-FRI")
     stop_schedule           = optional(string, "0 18 * * MON-FRI")
-    deletion_protection     = optional(bool, false)
+    deletion_protection     = optional(bool, true)
     custom_tags             = optional(list(string), [])
     custom_labels           = optional(map(string), {})
     is_spot                 = optional(bool, false)
@@ -204,7 +204,7 @@ variable "databases" {
     ha_enabled            = optional(bool, false)
     backup_enabled        = optional(bool, true)
     backup_retention_days = optional(number, 7)
-    deletion_protection   = optional(bool, false)
+    deletion_protection   = optional(bool, true)
     databases = optional(list(object({
       name      = string
       charset   = optional(string, "UTF8")
