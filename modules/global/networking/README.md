@@ -1,6 +1,7 @@
 # Global Networking Module
 
 This module creates global networking resources including:
+
 - VPC networks (global resource)
 - Subnets (regional, but managed in global networking)
 - Firewall rules
@@ -43,16 +44,16 @@ module "networking" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| network_name | Name of the VPC network | string | - | yes |
-| subnets | List of subnets | list(object) | [] | no |
-| firewall_rules | List of firewall rules | list(object) | [] | no |
+| :--- | :--- | :--- | :--- | :--- |
+| `project_id` | GCP Project ID | `string` | - | yes |
+| `network_name` | Name of the VPC network | `string` | - | yes |
+| `subnets` | List of subnets | `list(object)` | `[]` | no |
+| `firewall_rules` | List of firewall rules | `list(object)` | `[]` | no |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
-| network_name | VPC network name |
-| network_self_link | VPC network self link |
-| subnet_names | List of subnet names |
+| :--- | :--- |
+| `network_name` | VPC network name |
+| `network_self_link` | VPC network self link |
+| `subnet_names` | List of subnet names |

@@ -48,16 +48,16 @@ module "cloud_run" {
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| region | GCP Region | string | - | yes |
-| service_name | Name of Cloud Run service | string | - | yes |
-| image | Container image | string | - | yes |
+| Name           | Description               | Type     | Default | Required |
+| :------------- | :------------------------ | :------- | :------ | :------- |
+| `project_id`   | GCP Project ID            | `string` | -       | yes      |
+| `region`       | GCP Region                | `string` | -       | yes      |
+| `service_name` | Name of Cloud Run service | `string` | -       | yes      |
+| `image`        | Container image           | `string` | -       | yes      |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| service_url | Cloud Run service URL |
-| service_id | Service ID |
+| Name          | Description           |
+| :------------ | :-------------------- |
+| `service_url` | Cloud Run service URL |
+| `service_id`  | Service ID            |

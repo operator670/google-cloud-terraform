@@ -1,6 +1,7 @@
 # Global IAM Module
 
 This module creates global IAM resources including:
+
 - Service Accounts
 - IAM role bindings (project-level and service account-level)
 - Service account keys
@@ -34,14 +35,14 @@ module "iam" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| service_accounts | List of service accounts to create | list(object) | [] | no |
-| project_iam_bindings | Project-level IAM bindings | list(object) | [] | no |
+| :--- | :--- | :--- | :--- | :--- |
+| `project_id` | GCP Project ID | `string` | - | yes |
+| `service_accounts` | List of service accounts to create | `list(object)` | `[]` | no |
+| `project_iam_bindings` | Project-level IAM bindings | `list(object)` | `[]` | no |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
-| service_account_emails | Map of service account emails |
-| service_account_ids | Map of service account IDs |
+| :--- | :--- |
+| `service_account_emails` | Map of service account emails |
+| `service_account_ids` | Map of service account IDs |

@@ -49,18 +49,18 @@ module "gke" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|----------|
-| project_id | GCP Project ID | string | - | yes |
-| region | GCP Region | string | - | yes |
-| cluster_name | Name of GKE cluster | string | - | yes |
-| network | VPC network name | string | - | yes |
-| subnetwork | Subnet name | string | - | yes |
-| node_pools | List of node pools | list(object) | [] | yes |
+| :--- | :--- | :--- | :--- | :--- |
+| `project_id` | GCP Project ID | `string` | - | yes |
+| `region` | GCP Region | `string` | - | yes |
+| `cluster_name` | Name of GKE cluster | `string` | - | yes |
+| `network` | VPC network name | `string` | - | yes |
+| `subnetwork` | Subnet name | `string` | - | yes |
+| `node_pools` | List of node pools | `list(object)` | `[]` | yes |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
-| cluster_id | Cluster ID |
-| cluster_endpoint | Cluster endpoint |
-| cluster_ca_certificate | Cluster CA certificate |
+| :--- | :--- |
+| `cluster_id` | Cluster ID |
+| `cluster_endpoint` | Cluster endpoint |
+| `cluster_ca_certificate` | Cluster CA certificate |
