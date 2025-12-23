@@ -16,7 +16,7 @@ When designing Terraform codebases, there is a fundamental choice between **Unif
 
 ---
 
-## 🏛️ Component-Based Silos (The "Colleague's" Approach)
+## 🏛️ Component-Based Silos (The "Silo" Approach)
 *Each service has its own folder and its own independent state file.*
 
 | Feature | Component Silos |
