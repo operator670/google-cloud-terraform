@@ -39,7 +39,8 @@ module "compute" {
 | `instance_name` | Name of the instance               | `string` | -           | yes      |
 | `machine_type`  | Machine type                       | `string` | `e2-medium` | no       |
 | `network`       | VPC network name                   | `string` | -           | yes      |
-| `subnetwork`    | Subnet name                        | `string` | -           | yes      |
+| `subnetwork`            | Subnet name                        | `string` | -           | yes      |
+| `boot_disk_auto_delete` | Auto-delete boot disk on destroy   | `bool`   | `true`      | no       |
 
 ## Outputs
 
