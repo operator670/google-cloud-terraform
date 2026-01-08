@@ -150,6 +150,7 @@ For a deeper dive into the architectural decisions and technical governance of t
 - [Blast Radius Management](file:///home/sarthak/terraform-codebase/docs/blast-radius-management.md): How we stay safe in a layered model.
 - [Project Deletion Guide](file:///home/sarthak/terraform-codebase/docs/project-deletion-guide.md): Safe workflow for removing projects and handling `deletion_policy`.
 - [Target Customer Profiles](file:///home/sarthak/terraform-codebase/docs/target-customer-profiles.md): Who is this codebase built for?
+- [Drift Detection Guide](file:///home/sarthak/terraform-codebase/docs/drift-detection.md): How to detect, analyze, and resolve infrastructure drift.
 
 ---
 
