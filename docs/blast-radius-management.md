@@ -1,8 +1,8 @@
 # Blast Radius Management
 
-One common concern with "Unified State" Blueprints is the Blast Radius—the potential impact of a single command. We manage this through a "Defense in Depth" strategy.
+One common concern with "Unified State" Blueprints is the Blast Radius—the potential impact of a single command. We manage this through a "Defense in Depth" strategy with four layers of protection.
 
-## 🛡️ The 3-Layer Safety System
+## 🛡️ The 4-Layer Safety System
 
 ### Layer 1: Provider-Level Hard Locks (`prevent_destroy`)
 
@@ -20,10 +20,16 @@ Resources that hold data (Cloud SQL) or represent significant cost (VMs) have th
 
 ### Layer 3: Logical Segregation (Environment Silos)
 
-While services (Net/Compute/DB) are unified within an environment, the **Environments themselves stay isolated**.
+While services (Net/Compute/DB) share some logic, the **Environments themselves stay completely isolated**.
 
 - **Effect**: A mistake in `environments/dev` can NEVER touch `environments/prod`. Each environment has a different project, a different service account, and a different state file.
 
-## 📈 Why this is safer than manual silos
+### Layer 4: State File Decentralization (Project Layers)
 
-In a "manual silo" model, humans often make copy-paste errors when trying to connect folders via `remote_state`. These errors are hard to debug and can lead to networking loops. In our model, **Terraform handles the connections**, reducing human error—the #1 cause of major outages.
+By splitting an environment into a **Shared Infrastructure Layer** and multiple **Project Layers**, we decouple the most critical resources from daily workload changes.
+
+- **Effect**: A `terraform destroy` run by mistake in a project folder can only take down that specific project's VMs and databases. It cannot touch the VPC, the VPN tunnels, or other projects in the same environment.
+
+## 📈 Why this is safer than traditional manual silos
+
+In a "manual silo" model, humans often make copy-paste errors when trying to connect folders via `remote_state`. In our model, we use a hybrid approach: **Layered Composition**. We keep the high-level orchestration consistent via the `environment` module but separate the execution contexts into small, manageable state files. This gives us the best of both worlds: **Global Consistency** and **Minimal Blast Radius**.

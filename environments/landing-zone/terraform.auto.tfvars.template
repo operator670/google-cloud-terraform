@@ -1,0 +1,18 @@
+# Landing Zone Configuration - Template
+# Copy this file to terraform.tfvars and fill in your values
+
+parent_id       = "organizations/YOUR_ORG_ID"
+billing_account = "000000-000000-000000"
+prefix          = "acme"
+env_name        = "prod"
+
+# ---------------------------------------------------------------------------------------------------------------------
+# IMPORTANT: Edit landing-zone.yaml to define your folder hierarchy and projects
+# ---------------------------------------------------------------------------------------------------------------------
+# The YAML file supports:
+# - Arbitrary folder nesting
+# - Hundreds of projects with for_each
+# - Automatic Shared VPC host/service relationships
+# - Custom labels per project
+#
+# See landing-zone.yaml for the complete schema and examples.

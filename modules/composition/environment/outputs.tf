@@ -13,6 +13,16 @@ output "network_self_links" {
   value       = { for k, v in module.networking : k => v.network_self_link }
 }
 
+output "subnet_ids" {
+  description = "Map of network names to their subnet IDs"
+  value       = { for k, v in module.networking : k => v.subnet_ids }
+}
+
+output "subnet_self_links" {
+  description = "Map of network names to their subnet self links"
+  value       = { for k, v in module.networking : k => v.subnet_self_links }
+}
+
 output "subnet_ip_cidr_ranges" {
   description = "Map of subnet names to their IP CIDR ranges per network"
   value       = { for k, v in module.networking : k => v.subnet_ip_cidr_ranges }

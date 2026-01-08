@@ -30,74 +30,16 @@ variable "labels" {
   default     = {}
 }
 
-variable "enable_ncc" {
-  description = "Enable Network Connectivity Center (NCC) for transit connectivity between VPCs"
+variable "is_shared_vpc_service" {
+  description = "Whether this project is a Shared VPC service project"
   type        = bool
   default     = false
 }
 
-variable "ncc_hub_name" {
-  description = "Name of the NCC Hub"
+variable "host_project_id" {
+  description = "The ID of the Shared VPC host project"
   type        = string
-  default     = "enterprise-transit-hub"
-}
-
-# Networking Variables
-variable "networks" {
-  description = "Map of VPC networks to create"
-  type = map(object({
-    network_name            = string
-    auto_create_subnetworks = optional(bool, false)
-    routing_mode            = optional(string, "GLOBAL")
-    subnets = list(object({
-      subnet_name           = string
-      subnet_ip             = string
-      subnet_region         = string
-      subnet_private_access = optional(bool, true)
-      subnet_flow_logs      = optional(bool, false)
-      description           = optional(string, "")
-      secondary_ranges = optional(list(object({
-        range_name    = string
-        ip_cidr_range = string
-      })), [])
-    }))
-    enable_nat = optional(bool, false)
-  }))
-  default = {}
-}
-
-variable "network_name" {
-  description = "VPC network name"
-  type        = string
-}
-
-variable "subnet_cidr" {
-  description = "Subnet CIDR range"
-  type        = string
-  default     = "10.0.0.0/24"
-}
-
-variable "enable_nat" {
-  description = "Enable Cloud NAT"
-  type        = bool
-  default     = true
-}
-
-variable "subnets" {
-  description = "List of subnets to create"
-  type = list(object({
-    subnet_name           = string
-    subnet_ip             = string
-    subnet_region         = string
-    subnet_private_access = optional(bool, true)
-    subnet_flow_logs      = optional(bool, false)
-    description           = optional(string, "")
-    secondary_ranges = optional(list(object({
-      range_name    = string
-      ip_cidr_range = string
-    })), [])
-  }))
-  default = []
+  default     = null
 }
 
 variable "firewall_policies" {
@@ -128,7 +70,7 @@ variable "firewall_policies" {
 }
 
 ################################################################################
-# Compute Variables
+# Workload Variables
 ################################################################################
 
 variable "compute_instances" {
@@ -158,13 +100,15 @@ variable "compute_instances" {
     custom_labels           = optional(map(string), {})
     is_spot                 = optional(bool, false)
     instance_name           = optional(string, null)
+    network_project         = optional(string, null)
+    image_family            = optional(string, null)
+    image_project           = optional(string, null)
+    service_account_email   = optional(string, null)
+    key_revocation_action_type = optional(string, null)
+    enable_external_ip      = optional(bool, false)
   }))
   default = {}
 }
-
-################################################################################
-# Storage Variables
-################################################################################
 
 variable "storage_buckets" {
   description = "Map of storage buckets to create"
@@ -199,10 +143,6 @@ variable "storage_buckets" {
   }))
   default = {}
 }
-
-################################################################################
-# Database Variables
-################################################################################
 
 variable "databases" {
   description = "Map of Cloud SQL databases to create"
@@ -243,10 +183,6 @@ variable "databases" {
   default = {}
 }
 
-################################################################################
-# GKE Variables
-################################################################################
-
 variable "gke_clusters" {
   description = "Map of GKE clusters to create"
   type = map(object({
@@ -282,10 +218,6 @@ variable "gke_clusters" {
   default = {}
 }
 
-################################################################################
-# Secret Manager Variables
-################################################################################
-
 variable "secrets" {
   description = "Map of secrets to create"
   type = map(object({
@@ -312,10 +244,6 @@ variable "secrets" {
   default = {}
 }
 
-################################################################################
-# Cloud Run Variables
-################################################################################
-
 variable "cloud_run_services" {
   description = "Map of Cloud Run services to create"
   type = map(object({
@@ -340,10 +268,6 @@ variable "cloud_run_services" {
   }))
   default = {}
 }
-
-################################################################################
-# Cloud Functions Variables
-################################################################################
 
 variable "cloud_functions" {
   description = "Map of Cloud Functions to create"

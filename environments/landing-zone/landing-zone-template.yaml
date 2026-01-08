@@ -1,0 +1,83 @@
+# Landing Zone Configuration
+# This file defines the complete folder hierarchy and project structure for your GCP organization.
+
+# ---------------------------------------------------------------------------------------------------------------------
+# FOLDER HIERARCHY
+# ---------------------------------------------------------------------------------------------------------------------
+# Define your folder structure. Each folder must specify its parent.
+# Use "root" as the parent for top-level folders (they will be created under the org/folder specified in tfvars).
+
+folders:
+  # Level 1: Environment folder
+  - name: "Shared-Services"
+    parent: "root"
+
+  - name: "Applications"
+    parent: "root"
+
+  # Level 2: Functional folders under Shared-Services
+  - name: "Networking"
+    parent: "Shared-Services"
+
+  - name: "Security"
+    parent: "Shared-Services"
+
+  # Level 2: Application categories
+  - name: "Frontend"
+    parent: "Applications"
+
+  - name: "Backend"
+    parent: "Applications"
+
+  - name: "Data"
+    parent: "Applications"
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PROJECTS
+# ---------------------------------------------------------------------------------------------------------------------
+# Define all projects. Each project must specify:
+#   - folder: The folder name (from above) where this project will be created
+#   - is_shared_vpc_host: (optional) Set to true to make this a Shared VPC host
+#   - shared_vpc_host: (optional) The project key of the Shared VPC host to attach to
+#   - billing_account: (optional) Specify a project-specific billing ID. Overrides the global billing ID.
+#                      Set to 'null' to explicitly disable billing if a global default is present.
+#   - enable_lien: (optional) Set to false to disable the project deletion lien (default: true).
+#   - labels: (optional) Key-value pairs for project labels
+
+projects:
+  # Shared VPC Host Project (Uses global default billing)
+  host-networking:
+    folder: "Networking"
+    is_shared_vpc_host: true
+    labels:
+      environment: "shared"
+      team: "platform"
+      cost-center: "infrastructure"
+
+  # Shared VPC Service Project (Uses a DIFFERENT billing ID)
+  service-project:
+    folder: "Backend"
+    shared_vpc_host: "host-networking"
+    billing_account: "000000-111111-222222" # Override ID
+    labels:
+      environment: "production"
+      team: "backend"
+      app: "api-services"
+
+  # Standalone Project (Explicitly NO billing account)
+  standalone-project:
+    folder: "Security"
+    billing_account: null # Opt-out of global default
+    deletion_policy: PREVENT
+    enable_lien: true
+    labels:
+      environment: "shared"
+      team: "security"
+# ---------------------------------------------------------------------------------------------------------------------
+# NOTES
+# ---------------------------------------------------------------------------------------------------------------------
+# 1. Folder Creation Order: Terraform will automatically handle dependencies (parent folders created first)
+# 2. Project Dependencies: Host projects are created before service projects automatically
+# 3. Naming: Project IDs will be: {prefix}-{project-key} (e.g., "acme-host-networking")
+# 4. Scaling: Add as many folders and projects as needed - the for_each loops handle it all
+# 5. Labels: All projects get automatic labels: managed-by=terraform, created-from=landing-zone

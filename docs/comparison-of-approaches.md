@@ -1,37 +1,52 @@
-# Comparison of Approaches: Blueprint vs. Silos
+# Comparison of Approaches: Architecture Models
 
-When designing Terraform codebases, there is a fundamental choice between **Unified Composition** (what we use) and **Component-Based Silos**.
+When designing Terraform codebases, there are three primary models for organizing resources and state: **Unified Blueprint**, **Layered Composition**, and **Component Silos**.
 
-## 🏗️ Unified Composition (Blueprint Pattern)
+## 1. Unified Blueprint (The Original Model)
 
-*All services (Networking, Compute, DB) are managed in a single state file per environment.*
+*All services in an environment share a single state file.*
 
-| Feature | Blueprint Pattern |
+| Feature | Unified Blueprint |
 | :--- | :--- |
-| **Connectivity** | Dynamic. The VPC ID is passed to the VM automatically in memory. |
-| **Consistency** | 100%. One change to the blueprint updates all environments. |
-| **Deployment** | Single Step. `terraform apply` builds everything in order. |
-| **Maintenance** | Single Point of Truth. Update logic in one file. |
+| **Connectivity** | Native. Resources connect in memory. |
+| **Consistency** | 100%. One logic for everything. |
+| **Blast Radius** | High. One error can impact all services. |
+| **Speed** | Slow. Large state files lead to long refresh times. |
 
-**Best For:** Fast-moving teams, platform-as-a-product models, and multi-tenant architectures.
+**Best For:** Small environments or internal tools with limited resources.
 
 ---
 
-## 🏛️ Component-Based Silos (The "Silo" Approach)
+## 2. Layered Composition (Our Current Standard)
 
-*Each service has its own folder and its own independent state file.*
+*Shared infrastructure (Networking) and Projects (Workloads) have separate state files.*
+
+| Feature | Layered Composition |
+| :--- | :--- |
+| **Connectivity** | Dynamic. Projects consume existing shared networks. |
+| **Consistency** | 100%. Uses the same module library across layers. |
+| **Blast Radius** | Low. Issues are isolated to specific projects. |
+| **Speed** | Fast. Small, focused state files for projects. |
+
+**Best For:** Scalable multi-tenant platforms, high-growth startups, and MSPs.
+
+---
+
+## 3. Component Silos (The Manual Approach)
+
+*Each service (Net, IAM, DB) has its own independent state file.*
 
 | Feature | Component Silos |
 | :--- | :--- |
-| **Isolation** | High. Deleting a DB cannot touch the VPC. |
-| **Complexity** | High. Requires `remote_state` data sources to connect folders. |
-| **Deployment** | Multi-Step. Must apply Networking -> IAM -> DB -> Compute in order. |
-| **Governance** | Distributed. Easy for Dev and Prod silos to drift apart over time. |
+| **Connectivity** | Complex. Requires manual `remote_state` data sources. |
+| **Consistency** | Low. Silos easily drift apart over time. |
+| **Blast Radius** | Minimal. Maximum isolation. |
+| **Speed** | Moderate. Multiple steps required for deployment. |
 
-**Best For:** Massive organizations with segregated teams (e.g., a dedicated Network Team that never talks to the Apps Team).
+**Best For:** Very large organizations with completely independent engineering teams.
 
 ---
 
-## ⚖️ Why We Chose Blueprints
+## ⚖️ Why We Chose Layered Composition
 
-We prioritized **Speed** and **Consistency**. By using "Hard Locks" (`prevent_destroy`) and "Guardrails" (`deletion_protection`), we achieve the safety of silos without the massive operational overhead of managing disconnected state files and manual dependency tracking.
+We found that while **Unified Blueprints** provided great consistency, they hit a "complexity wall" as we added more projects. **Layered Composition** is the hybrid solution: it maintains the **Global Consistency** of a blueprint while providing the **Isolation and Speed** of silos.

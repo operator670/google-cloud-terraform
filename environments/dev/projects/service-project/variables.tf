@@ -1,6 +1,16 @@
+################################################################################
+# Common Variables
+################################################################################
+
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
+}
+
+variable "primary_region" {
+  description = "Primary GCP region"
+  type        = string
+  default     = "asia-south1"
 }
 
 variable "customer_name" {
@@ -10,12 +20,8 @@ variable "customer_name" {
 
 variable "environment" {
   description = "Environment name"
-}
-
-variable "primary_region" {
-  description = "Primary GCP region"
   type        = string
-  default     = "asia-south1"
+  default     = "dev"
 }
 
 variable "labels" {
@@ -36,81 +42,8 @@ variable "host_project_id" {
   default     = null
 }
 
-# Compatibility Variables
-variable "enable_ncc" {
-  description = "Enable Network Connectivity Center (NCC)"
-  type        = bool
-  default     = false
-}
-
-variable "ncc_hub_name" {
-  description = "Name of the NCC Hub"
-  type        = string
-  default     = "enterprise-transit-hub"
-}
-
-variable "network_name" {
-  description = "VPC network name (Legacy)"
-  type        = string
-  default     = null
-}
-
-variable "subnet_cidr" {
-  description = "Subnet CIDR range (Legacy)"
-  type        = string
-  default     = null
-}
-
-variable "enable_nat" {
-  description = "Enable Cloud NAT (Legacy)"
-  type        = bool
-  default     = false
-}
-
-variable "subnets" {
-  description = "List of subnets to create (Legacy)"
-  type = list(object({
-    subnet_name           = string
-    subnet_ip             = string
-    subnet_region         = string
-    subnet_private_access = optional(bool, true)
-    subnet_flow_logs      = optional(bool, false)
-    description           = optional(string, "")
-    secondary_ranges = optional(list(object({
-      range_name    = string
-      ip_cidr_range = string
-    })), [])
-  }))
-  default = []
-}
-
-# Networking
-variable "networks" {
-  description = "Map of networks to create"
-  type = map(object({
-    network_name            = optional(string, null)
-    auto_create_subnetworks = optional(bool, false)
-    routing_mode            = optional(string, "REGIONAL")
-    exclude_from_ncc        = optional(bool, false)
-    subnets = list(object({
-      subnet_name           = string
-      subnet_ip             = string
-      subnet_region         = string
-      subnet_private_access = optional(bool, true)
-      subnet_flow_logs      = optional(bool, false)
-      description           = optional(string, "")
-      secondary_ranges = optional(list(object({
-        range_name    = string
-        ip_cidr_range = string
-      })), [])
-    }))
-    enable_nat = optional(bool, false)
-  }))
-  default = {}
-}
-
 variable "firewall_policies" {
-  description = "Map of firewall policies to create"
+  description = "Map of firewall policies to create, each explicitly targeting a network"
   type = map(object({
     network_key = string
     rules = list(object({
@@ -136,9 +69,12 @@ variable "firewall_policies" {
   default = {}
 }
 
-# Compute
+################################################################################
+# Workload Variables
+################################################################################
+
 variable "compute_instances" {
-  description = "Map of compute instances to create. Note: For Shared VPC service projects, subnet_name must be explicitly specified."
+  description = "Map of compute instances to create"
   type = map(object({
     network_key  = optional(string, "default")
     subnet_name  = optional(string, null)
@@ -159,7 +95,7 @@ variable "compute_instances" {
     enable_scheduling          = optional(bool, false)
     start_schedule             = optional(string, "0 8 * * MON-FRI")
     stop_schedule              = optional(string, "0 18 * * MON-FRI")
-    deletion_protection        = optional(bool, true)
+    deletion_protection        = optional(bool, false)
     custom_tags                = optional(list(string), [])
     custom_labels              = optional(map(string), {})
     is_spot                    = optional(bool, false)
@@ -175,7 +111,6 @@ variable "compute_instances" {
   default = {}
 }
 
-# Storage
 variable "storage_buckets" {
   description = "Map of storage buckets to create"
   type = map(object({
@@ -210,9 +145,8 @@ variable "storage_buckets" {
   default = {}
 }
 
-# Database
 variable "databases" {
-  description = "Map of databases to create"
+  description = "Map of Cloud SQL databases to create"
   type = map(object({
     network_key           = optional(string, "default")
     region                = string
@@ -250,7 +184,6 @@ variable "databases" {
   default = {}
 }
 
-# GKE
 variable "gke_clusters" {
   description = "Map of GKE clusters to create"
   type = map(object({
@@ -278,42 +211,40 @@ variable "gke_clusters" {
     enable_network_policy = optional(bool, true)
     release_channel       = optional(string, "REGULAR")
     custom_labels         = optional(map(string), {})
-    authorized_networks = list(object({
+    authorized_networks = optional(list(object({
       cidr_block   = string
       display_name = string
-    }))
+    })), [])
   }))
   default = {}
 }
 
-# Secrets
 variable "secrets" {
   description = "Map of secrets to create"
   type = map(object({
     secret_id = string
-    replication_policy = object({
+    replication_policy = optional(object({
       automatic = optional(bool, true)
       user_managed = optional(object({
         replicas = list(object({
           location = string
         }))
       }))
-    })
-    labels = map(string)
-    versions = list(object({
+    }), { automatic = true })
+    labels = optional(map(string), {})
+    versions = optional(list(object({
       version_id  = string
       secret_data = string
-      enabled     = bool
-    }))
-    iam_bindings = list(object({
+      enabled     = optional(bool, true)
+    })), [])
+    iam_bindings = optional(list(object({
       role    = string
       members = list(string)
-    }))
+    })), [])
   }))
   default = {}
 }
 
-# Cloud Run
 variable "cloud_run_services" {
   description = "Map of Cloud Run services to create"
   type = map(object({
@@ -339,7 +270,6 @@ variable "cloud_run_services" {
   default = {}
 }
 
-# Cloud Functions
 variable "cloud_functions" {
   description = "Map of Cloud Functions to create"
   type = map(object({

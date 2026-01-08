@@ -7,7 +7,7 @@ resource "google_compute_network" "vpc" {
   description             = var.description
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 

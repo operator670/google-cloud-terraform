@@ -11,15 +11,17 @@ resource "google_compute_instance" "main" {
   labels = var.labels
 
   # Advanced Options
-  min_cpu_platform            = var.min_cpu_platform
-  deletion_protection         = var.deletion_protection
-  allow_stopping_for_update   = var.allow_stopping_for_update
-  can_ip_forward              = var.can_ip_forward
-  hostname                    = var.hostname
-  resource_policies = var.enable_scheduling && var.schedule_config != null ? [google_compute_resource_policy.instance_schedule[0].self_link] : []
+  min_cpu_platform           = var.min_cpu_platform
+  deletion_protection        = var.deletion_protection
+  allow_stopping_for_update  = var.allow_stopping_for_update
+  can_ip_forward             = var.can_ip_forward
+  hostname                   = var.hostname
+  key_revocation_action_type = var.key_revocation_action_type
+  resource_policies          = var.enable_scheduling && var.schedule_config != null ? [google_compute_resource_policy.instance_schedule[0].self_link] : []
 
   # Boot Disk
   boot_disk {
+    auto_delete = var.boot_disk_auto_delete
     initialize_params {
       image = "projects/${var.image_project}/global/images/family/${var.image_family}"
       size  = var.disk_size_gb
@@ -80,8 +82,16 @@ resource "google_compute_instance" "main" {
   }
 
   network_interface {
-    network    = var.network
-    subnetwork = var.subnetwork
+    network            = var.network_project != null ? "projects/${var.network_project}/global/networks/${var.network}" : var.network
+    subnetwork         = var.network_project != null ? "projects/${var.network_project}/regions/${var.region}/subnetworks/${var.subnetwork}" : var.subnetwork
+    subnetwork_project = var.network_project
+
+    dynamic "access_config" {
+      for_each = var.enable_external_ip ? [1] : []
+      content {
+        # Ephemeral IP
+      }
+    }
   }
 
   metadata = merge(
@@ -122,8 +132,16 @@ resource "google_compute_instance_template" "main" {
   }
 
   network_interface {
-    network    = var.network
-    subnetwork = var.subnetwork
+    network            = var.network_project != null ? "projects/${var.network_project}/global/networks/${var.network}" : var.network
+    subnetwork         = var.network_project != null ? "projects/${var.network_project}/regions/${var.region}/subnetworks/${var.subnetwork}" : var.subnetwork
+    subnetwork_project = var.network_project
+
+    dynamic "access_config" {
+      for_each = var.enable_external_ip ? [1] : []
+      content {
+        # Ephemeral IP
+      }
+    }
   }
 
   metadata = merge(

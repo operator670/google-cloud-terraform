@@ -1,0 +1,41 @@
+# Landing Zone Configuration
+# This file defines the folder structure and projects for your landing zone
+
+folders: []
+#   # Root-level folders (parent: "root")
+#   - name: production
+#     parent: root
+#
+#   - name: non-production
+#     parent: root
+#
+#   - name: shared-services
+#     parent: root
+#
+#   # Child folders (optional - can have parent folders other than "root")
+#   # - name: dev
+#   #   parent: non-production
+
+projects: {}
+#   # Example Shared VPC Host Project
+#   # networking-prod:
+#   #   folder: production
+#   #   is_shared_vpc_host: true
+#   #   labels:
+#   #     environment: production
+#   #     team: platform
+#
+#   # Example Shared VPC Service Project
+#   # app-prod:
+#   #   folder: production
+#   #   shared_vpc_host: networking-prod
+#   #   labels:
+#   #     environment: production
+#   #     team: application
+#
+#   # Example Standalone Project (no Shared VPC)
+#   # logging-prod:
+#   #   folder: shared-services
+#   #   labels:
+#   #     environment: production
+#   #     team: platform

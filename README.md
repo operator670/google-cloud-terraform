@@ -1,18 +1,26 @@
 # Google Cloud Platform Infrastructure
 
-This repository contains the Terraform codebase for managing the Multi-Customer Google Cloud Platform (GCP) infrastructure. It is designed using the **Composition Module Pattern** to ensure consistency, scalability, and strict governance across Development, Staging, and Production environments.
+This repository contains the Terraform codebase for managing the Multi-Customer Google Cloud Platform (GCP) infrastructure. It is designed using the **Layered Composition Architecture** to ensure consistency, scalability, and strict governance across Development, Staging, and Production environments.
 
 ## 🏗️ Architecture
 
-The infrastructure adopts a **Unified Blueprint Architecture** to maximize code reuse and eliminate configuration drift.
+The infrastructure adopts a **Layered Composition Architecture** (Evolved from the Unified Blueprint) to maximize code reuse while providing strong isolation between shared infrastructure and individual projects.
 
-### 1. Composition Blueprint (`modules/composition`)
+### 1. Shared Infrastructure Layer (`environments/*/infrastructure`)
 
-The core architectural logic is centralized in the `modules/composition/environment` module. This "Blueprint" defines the standard reference architecture (VPC, Compute, GKE, Databases, IAM) that is instantiated across all environments.
+The foundational layer for each environment. It manages shared resources that provide common services to multiple projects:
 
-### 2. Environment Configurations (`environments/*`)
+- **Networking**: VPCs, Subnets, Cloud NAT.
+- **Connectivity**: Network Connectivity Center (NCC) Hubs and spokes.
+- **Compliance**: Organization-level firewall policies and governance.
 
-Environments are purposefully lightweight. They consume the **Composition Blueprint** and apply environment-specific configurations via variables (e.g., machine types, cluster sizes, high-availability settings).
+### 2. Project Layer (`environments/*/projects/*`)
+
+Independent projects that consume the shared infrastructure. Each project has its own lifecycle and state file, reducing blast radius and enabling independent deployments.
+
+- **Workloads**: Compute Engine, GKE, Cloud Run.
+- **Data**: Cloud SQL, Cloud Storage.
+- **Security**: Project-specific secrets and IAM.
 
 ### 3. Service Modules (`modules/{global,regional}`)
 
@@ -37,23 +45,44 @@ gcloud auth application-default login
 gcloud config set project YOUR-PROJECT-ID
 ```
 
-### 2. Initial Setup
+### 2. Landing Zone Deployment (Organization Level)
 
-We use **Partial Backend Configuration** to keep sensitive bucket names out of the code.
+The Landing Zone establishes the core resource hierarchy (folders) and central projects (Networking, Security).
 
 ```bash
-# 1. Create your backend config file from template
-cp backend-configs/dev.tfvars.template backend-configs/dev.tfvars
+# 1. Navigate to landing zone
+cd environments/landing-zone
 
-# 2. Edit the file to set your Terraform State Bucket
-# bucket = "my-company-terraform-state"
+# 2. Configure variables
+# Edit terraform.auto.tfvars with your org_id and billing_account
 
-# 3. Initialize the environment
-cd environments/dev
-terraform init -backend-config=../../backend-configs/dev.tfvars
+# 3. Define Hierarchy
+# Edit landing-zone.yaml to define your folders and projects
+
+# 4. Deploy
+terraform init
+terraform apply
 ```
 
-### 3. Making Changes (The `.auto.tfvars` Workflow)
+### 3. Environment & Workload Setup (Project Level)
+
+After the landing zone is established, you can deploy environment-specific infrastructure and workloads. We use **Integrated Backend Configuration** in `providers.tf` to simplify usage and enforce state isolation.
+
+#### Shared Infrastructure Layer
+
+```bash
+cd environments/dev/infrastructure
+terraform init
+```
+
+#### Project Workload Layer
+
+```bash
+cd environments/dev/projects/service-project
+terraform init
+```
+
+### 4. Making Changes (The `.auto.tfvars` Workflow)
 
 We use split configuration files. **You do not edit `main.tf`**. You only edit data files.
 
@@ -65,7 +94,7 @@ We use split configuration files. **You do not edit `main.tf`**. You only edit d
 | **Change GKE Node Count** | `gke.auto.tfvars` |
 | **Add a Bucket** | `storage.auto.tfvars` |
 
-### 4. Deploying
+### 5. Deploying
 
 Always preview your changes before applying.
 
@@ -98,40 +127,17 @@ terraform apply
 
 To prevent accidental data loss or network outages, we implement the following safety mechanisms:
 
-### 1. Hard Locks (VPCs)
+### 1. State File Decentralization (Layered Isolation)
+
+By splitting shared infrastructure from project workloads, we ensure that a mistake in a project deployment cannot accidentally delete the networking backbone.
+
+### 2. Hard Locks (VPCs)
 
 The **Networking** module uses `prevent_destroy = true`. This is a hard lock at the provider level. To delete a VPC, you must manually unlock the module code (`modules/global/networking/main.tf`).
 
-### 2. Guardrails (Compute & Databases)
+### 3. Guardrails (Compute & Databases)
 
 Resources like VMs and SQL Instances have `deletion_protection = true` by default.
-
-- **To delete a specific resource**: Set `deletion_protection = false` in your `.auto.tfvars` file, run `apply` once to unlock it, and then you can safely remove the resource.
-
----
-
-## ⚙️ Operational Governance
-
-### Handling Manual Changes ("Drift")
-
-Infrastructure drift occurs when resources are modified manually in the Cloud Console, causing a divergence from the Terraform state.
-
-#### Scenario 1: Legitimate Changes (Codify)
-
-If a manual change (e.g., a hotfix firewall rule) needs to be permanent:
-
-1. **Identify**: Run `terraform plan` to see what Terraform wants to undo.
-2. **Codify**: Update the corresponding `.auto.tfvars` file (e.g., add to `firewall_policies`) to match the console reality.
-3. **Verify**: Run `terraform plan` again. It should say "No changes".
-
-#### Scenario 2: Unauthorized Changes (Remediate)
-
-If a change was accidental or unauthorized:
-
-1. **Run Apply**: `terraform apply`.
-2. **Result**: Terraform will strictly revert the resource to its defined state (e.g., closing an unauthorized port).
-
----
 
 ---
 
@@ -139,9 +145,10 @@ If a change was accidental or unauthorized:
 
 For a deeper dive into the architectural decisions and technical governance of this project, see:
 
-- [Architecture Overview](file:///home/sarthak/terraform-codebase/docs/architecture-overview.md): The "Composition Blueprint" explained.
-- [Comparison of Approaches](file:///home/sarthak/terraform-codebase/docs/comparison-of-approaches.md): Blueprint vs. Service Silos.
-- [Blast Radius Management](file:///home/sarthak/terraform-codebase/docs/blast-radius-management.md): How we stay safe in a unified state.
+- [Architecture Overview](file:///home/sarthak/terraform-codebase/docs/architecture-overview.md): The "Layered Composition" explained.
+- [Comparison of Approaches](file:///home/sarthak/terraform-codebase/docs/comparison-of-approaches.md): Unified vs. Layered vs. Service Silos.
+- [Blast Radius Management](file:///home/sarthak/terraform-codebase/docs/blast-radius-management.md): How we stay safe in a layered model.
+- [Project Deletion Guide](file:///home/sarthak/terraform-codebase/docs/project-deletion-guide.md): Safe workflow for removing projects and handling `deletion_policy`.
 - [Target Customer Profiles](file:///home/sarthak/terraform-codebase/docs/target-customer-profiles.md): Who is this codebase built for?
 
 ---
@@ -150,11 +157,13 @@ For a deeper dive into the architectural decisions and technical governance of t
 
 ```plaintext
 ├── modules/
-│   ├── composition/          # The Golden Blueprint
+│   ├── composition/          # The Golden Blueprints
 │   ├── global/               
 │   └── regional/             
 ├── environments/
-│   ├── dev/                  # <--- You work here
+│   ├── dev/                  
+│   │   ├── infrastructure/   # Shared Networking/NCC
+│   │   └── projects/         # Individual Project States
 │   ├── staging/              
 │   └── prod/                 
 ├── backend-configs/          # State Bucket Configs

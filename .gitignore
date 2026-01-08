@@ -1,4 +1,5 @@
 # Terraform
+#environments/landing-zone/landing-zone.yaml
 **/.terraform/*
 *.tfstate
 *.tfstate.*
