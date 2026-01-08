@@ -27,13 +27,6 @@ resource "google_cloud_run_v2_service" "main" {
       }
     }
 
-    # Cloud SQL connections
-    dynamic "cloud_sql_instances" {
-      for_each = var.cloudsql_instances
-      content {
-        instances = var.cloudsql_instances
-      }
-    }
 
     containers {
       image = var.image

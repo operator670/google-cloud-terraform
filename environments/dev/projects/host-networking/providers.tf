@@ -15,8 +15,8 @@ terraform {
   # Backend configuration - customize per customer
   # Initialize with: terraform init -backend-config=../../backend-configs/dev.tfvars
   backend "gcs" {
-    # bucket  = "CUSTOMER_NAME-terraform-state"
-    # prefix  = "dev"
+    bucket = "terraform-bucket-tcpl"
+    prefix = "dev/projects/host-networking"
   }
 }
 

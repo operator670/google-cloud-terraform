@@ -1,34 +1,44 @@
 # Development Environment
 
-This environment consumes the **Standard Composition Blueprint**.
-Architecture changes should be made in `modules/composition/environment`.
+This environment uses a **Project-Centric Layered Architecture** to manage shared infrastructure and individual project workloads at scale.
 
-## 🛠 Configuration
+## Layered Structure
 
-Configuration is split into domain-specific files for clarity:
+### 1. [Infrastructure Layer](file://terraform-codebase/environments/dev/infrastructure/)
 
-| File | Purpose |
-| :--- | :--- |
-| `common.auto.tfvars` | Project ID, Region, Labels, NCC Hub settings |
-| `compute.auto.tfvars` | VM definitions, Spot settings, Schedules |
-| `database.auto.tfvars` | Cloud SQL instances, Users, Passwords (via Secret ID) |
-| `networking.auto.tfvars` | Multi-VPC definitions, NAT settings, Subnets, NCC Spoke exclusions |
-| `firewall.auto.tfvars` | **Tiered** Firewall rules (Web -> App -> DB flow) |
-| `gke.auto.tfvars` | Kubernetes Clusters & Node Pools |
-| `storage.auto.tfvars` | GCS Buckets & Lifecycle Policies |
+Handles shared resources used by all projects:
 
-## 🔐 Secrets
+- **Networking**: Shared VPCs, subnets, and Cloud NAT.
+- **Connectivity**: Network Connectivity Center (NCC) hubs.
 
-Do **NOT** put plain text passwords in `database.auto.tfvars`.
-Instead, create a secret in GCP Secret Manager and reference it:
+### 2. [Projects Layer](file://terraform-codebase/environments/dev/projects/)
 
-```hcl
-password_secret_id = "projects/my-project/secrets/my-db-pass/versions/1"
-```
+Contains individual workload folders for different applications or teams.
 
-## ⚠️ Drift Warning
+## Critical Standards
 
-If you manually change resources in the Dev Project:
+### 1. State Isolation
 
-1. **Run `terraform plan` to see the drift.**
-2. **Review if you want to keep it (update tfvars) or revert it (`terraform apply`).**
+Each directory (Infrastructure or Project) has its own **isolated state** in GCS.
+
+- **Networking**: `prefix = "dev/infrastructure"`
+- **Projects**: `prefix = "dev/projects/PROJECT_NAME"`
+
+### 2. Shared VPC Integration
+
+Workload projects should be configured as Shared VPC Service Projects:
+
+- Set `is_shared_vpc_service = true` in `main.tf`.
+- Set `host_project_id` to the Networking project ID.
+- Configure `compute_instances` with the host's `network_project`, `network_key`, and `subnet_name`.
+
+## Usage
+
+1. **Initialize**: Run `terraform init` (Backend is pre-configured in `providers.tf`).
+2. **Apply Infrastructure**: Always apply `environments/dev/infrastructure` before any projects.
+3. **New Project**: Copy `projects/project-template/` to a new folder and update `providers.tf` (Prefix) and `common.auto.tfvars`.
+
+## Standards
+
+- Architecture logic is centralized in `modules/composition/environment`.
+- All projects MUST use the integrated backend configuration to prevent state collisions.

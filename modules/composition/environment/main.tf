@@ -1,166 +1,155 @@
+# Environment Layer - Composition Module
+# This module assembles various regional and global resources into a cohesive environment.
+
 locals {
-  common_labels = merge(
-    var.labels,
-    {
-      environment = var.environment
-      customer    = var.customer_name
-      managed_by  = "terraform"
-    }
-  )
-
   resource_prefix = "${var.customer_name}-${var.environment}"
+  common_labels = merge(var.labels, {
+    customer    = var.customer_name
+    environment = var.environment
+    managed_by  = "terraform"
+  })
 
-  # Merge legacy networking into the new networks structure if networks is empty
-  merged_networks = length(var.networks) > 0 ? var.networks : {
-    "default" = {
-      network_name            = var.network_name != "" ? var.network_name : "${local.resource_prefix}-vpc"
+  # Handle Legacy Networking Compatibility
+  legacy_network = var.network_name != null ? {
+    (var.network_name) = {
+      network_name            = var.network_name
       auto_create_subnetworks = false
-      routing_mode            = "GLOBAL"
-      subnets = length(var.subnets) > 0 ? var.subnets : [
-        {
-          subnet_name           = "${local.resource_prefix}-subnet-${var.primary_region}"
-          subnet_ip             = var.subnet_cidr
-          subnet_region         = var.primary_region
-          subnet_private_access = true
-          subnet_flow_logs      = true
-          description           = "Primary subnet for ${var.environment}"
-          secondary_ranges = [
-            {
-              range_name    = "gke-pods"
-              ip_cidr_range = "10.48.0.0/14"
-            },
-            {
-              range_name    = "gke-services"
-              ip_cidr_range = "10.52.0.0/20"
-            }
-          ]
-        }
-      ]
-      enable_nat       = var.enable_nat
-      exclude_from_ncc = false
+      routing_mode            = "REGIONAL"
+      exclude_from_ncc        = false
+      enable_nat              = var.enable_nat
+      subnets = length(var.subnets) > 0 ? var.subnets : (var.subnet_cidr != null ? [{
+        subnet_name           = "${var.network_name}-subnet"
+        subnet_ip             = var.subnet_cidr
+        subnet_region         = var.primary_region
+        subnet_private_access = true
+        subnet_flow_logs      = false
+        description           = "Default subnet created from legacy parameters"
+        secondary_ranges      = []
+      }] : [])
     }
+  } : {}
+
+  # Combine everything
+  # If is_shared_vpc_service is true, we don't create networks here
+  # Using for loop to maintain type consistency for empty maps
+  merged_networks = {
+    for k, v in merge(local.legacy_network, var.networks) : k => v
+    if !var.is_shared_vpc_service
   }
 }
 
-# Networking Module
+# 1. Networking (Skip if Shared VPC Service)
 module "networking" {
-  for_each = local.merged_networks
   source   = "../../global/networking"
-
-  project_id = var.project_id
-
-  # VPC
-  network_name = each.value.network_name
-  description  = "VPC ${each.key} for ${local.resource_prefix}"
-
-  # Subnets
-  subnets = each.value.subnets
-
-  # Cloud NAT
-  enable_nat  = each.value.enable_nat
-  nat_regions = each.value.enable_nat ? [var.primary_region] : []
-}
-
-# Firewall Baseline (Applied to all VPCs)
-module "firewall_baseline" {
   for_each = local.merged_networks
-  source   = "../../global/firewall"
 
   project_id   = var.project_id
-  network_name = module.networking[each.key].network_name
+  network_name = try(each.value.network_name, null) != null ? each.value.network_name : each.key
+  routing_mode = try(each.value.routing_mode, "REGIONAL")
+  subnets      = try(each.value.subnets, [])
 
-  firewall_rules = [
-    {
-      name        = "${local.resource_prefix}-${each.key}-allow-internal"
-      description = "Allow internal traffic in ${each.key}"
-      direction   = "INGRESS"
-      source_tags = ["${var.environment}"]
-      target_tags = ["${var.environment}"]
-      allow = [{
-        protocol = "tcp"
-        ports    = ["0-65535"]
-        }, {
-        protocol = "udp"
-        ports    = ["0-65535"]
-        }, {
-        protocol = "icmp"
-      }]
-    },
-    {
-      name        = "${local.resource_prefix}-${each.key}-allow-ssh"
-      description = "Allow SSH from IAP in ${each.key}"
-      direction   = "INGRESS"
-      ranges      = ["35.235.240.0/20"]
-      target_tags = ["ssh"]
-      allow = [{
-        protocol = "tcp"
-        ports    = ["22"]
-      }]
-    }
-  ]
-
-  enable_deny_all_ingress = true
+  # Forward common enable_nat flag if provided
+  enable_nat = try(each.value.enable_nat, var.enable_nat)
 }
 
-# Firewall Policies (Custom rules explicitly targeted)
-module "firewall_custom" {
-  for_each = var.firewall_policies
-  source   = "../../global/firewall"
-
-  project_id   = var.project_id
-  network_name = module.networking[each.value.network_key].network_name
-
-  firewall_rules          = each.value.rules
-  enable_deny_all_ingress = false # Managed by baseline
+# 1.1 Network Connectivity Center (NCC)
+resource "google_network_connectivity_hub" "hub" {
+  count       = var.enable_ncc ? 1 : 0
+  name        = var.ncc_hub_name
+  project     = var.project_id
+  description = "Central transit hub managed by environment composition"
+  labels      = local.common_labels
 }
 
-# IAM Module
+resource "google_network_connectivity_spoke" "spokes" {
+  for_each = {
+    for k, v in local.merged_networks : k => v
+    if var.enable_ncc && !try(v.exclude_from_ncc, false)
+  }
+
+  name     = "${local.resource_prefix}-${each.key}-spoke"
+  project  = var.project_id
+  location = "global"
+  hub      = google_network_connectivity_hub.hub[0].id
+  labels   = local.common_labels
+
+  linked_vpc_network {
+    uri = module.networking[each.key].network_id
+  }
+}
+
+# 2. IAM Configuration
 module "iam" {
   source = "../../global/iam"
 
   project_id = var.project_id
-
-  # Service Accounts
   service_accounts = [
     {
       account_id   = "${local.resource_prefix}-compute-sa"
-      display_name = "Compute SA for ${var.environment}"
-      description  = "Service account for compute instances in ${var.environment}"
+      display_name = "Service Account for Compute Instances"
+      description  = "Managed by Terraform"
     },
     {
       account_id   = "${local.resource_prefix}-gke-sa"
-      display_name = "GKE SA for ${var.environment}"
-      description  = "Service account for GKE nodes in ${var.environment}"
+      display_name = "Service Account for GKE Nodes"
+      description  = "Managed by Terraform"
     }
   ]
 
-  # Service Account IAM Bindings (P1 Enhancement: using iam_member now)
-  service_account_iam_bindings = []
+  project_iam_bindings = [
+    {
+      role = "roles/logging.logWriter"
+      members = [
+        "serviceAccount:${local.resource_prefix}-compute-sa@${var.project_id}.iam.gserviceaccount.com",
+        "serviceAccount:${local.resource_prefix}-gke-sa@${var.project_id}.iam.gserviceaccount.com"
+      ]
+    },
+    {
+      role = "roles/monitoring.metricWriter"
+      members = [
+        "serviceAccount:${local.resource_prefix}-compute-sa@${var.project_id}.iam.gserviceaccount.com",
+        "serviceAccount:${local.resource_prefix}-gke-sa@${var.project_id}.iam.gserviceaccount.com"
+      ]
+    },
+    {
+      role = "roles/artifactregistry.reader"
+      members = [
+        "serviceAccount:${local.resource_prefix}-gke-sa@${var.project_id}.iam.gserviceaccount.com"
+      ]
+    }
+  ]
 }
 
-# Secret Manager (P2 Enhancement)
-module "secrets" {
-  source = "../../global/secret-manager"
+# Support for Shared VPC Service Project IAM
+# Service accounts need Compute Network User role on the host project subnet/project
+resource "google_project_iam_member" "network_user" {
+  for_each = var.is_shared_vpc_service ? toset([
+    "serviceAccount:${module.iam.service_account_emails["${local.resource_prefix}-compute-sa"]}",
+    "serviceAccount:${module.iam.service_account_emails["${local.resource_prefix}-gke-sa"]}"
+  ]) : toset([])
 
-  project_id = var.project_id
-  secrets    = var.secrets
+  project = var.host_project_id
+  role    = "roles/compute.networkUser"
+  member  = each.value
 }
 
-# Compute Instances
+# 3. Compute Instances
 module "compute_instances" {
-  for_each = var.compute_instances
   source   = "../../regional/compute"
+  for_each = var.compute_instances
 
   project_id    = var.project_id
   region        = var.primary_region
   zone          = each.value.zone
   instance_name = coalesce(each.value.instance_name, "${local.resource_prefix}-${each.key}")
-  machine_type  = each.value.machine_type
-  is_spot       = each.value.is_spot # P2
+
+  machine_type = each.value.machine_type
 
   # Boot disk configuration
-  disk_size_gb = each.value.disk_size_gb
-  disk_type    = each.value.disk_type
+  disk_size_gb  = each.value.disk_size_gb
+  disk_type     = each.value.disk_type
+  image_family  = coalesce(each.value.image_family, "debian-11")
+  image_project = coalesce(each.value.image_project, "debian-cloud")
 
   # Additional disks
   additional_disks = each.value.additional_disks
@@ -186,105 +175,141 @@ module "compute_instances" {
     timezone       = "Asia/Kolkata"
   } : null
 
-  network    = module.networking[each.value.network_key].network_name
-  subnetwork = module.networking[each.value.network_key].subnet_names[coalesce(each.value.subnet_name, "${local.resource_prefix}-subnet-${var.primary_region}")]
+  # Networking Logic:
+  # - For Shared VPC: network_project = host project, network/subnet = from host project
+  # - For self-managed VPC: network_project = this project, network/subnet = from module.networking
+  network_project = each.value.network_project != null ? each.value.network_project : (var.is_shared_vpc_service ? var.host_project_id : var.project_id)
+  network         = try(module.networking[each.value.network_key].network_name, each.value.network_key)
+  # For Shared VPC, module.networking won't exist, so try() falls back to each.value.subnet_name
+  # For self-managed VPC, uses the subnet from module.networking or defaults to standard naming
+  subnetwork = try(module.networking[each.value.network_key].subnet_names[coalesce(each.value.subnet_name, "${local.resource_prefix}-subnet-${var.primary_region}")], each.value.subnet_name)
 
   tags   = concat(["ssh", var.environment], each.value.custom_tags)
   labels = merge(local.common_labels, each.value.custom_labels)
 
-  service_account_email  = module.iam.service_account_emails["${local.resource_prefix}-compute-sa"]
+  service_account_email  = coalesce(each.value.service_account_email, module.iam.service_account_emails["${local.resource_prefix}-compute-sa"])
   service_account_scopes = ["cloud-platform"]
 
-  deletion_protection = each.value.deletion_protection
-
-  depends_on = [module.networking, module.iam, module.firewall_baseline, module.firewall_custom]
+  is_spot                    = each.value.is_spot
+  deletion_protection        = each.value.deletion_protection
+  key_revocation_action_type = each.value.key_revocation_action_type
+  enable_external_ip         = each.value.enable_external_ip
+  boot_disk_auto_delete      = each.value.boot_disk_auto_delete
 }
 
-# Databases
+# 4. Storage Buckets
+module "storage_buckets" {
+  source   = "../../regional/storage"
+  for_each = var.storage_buckets
+
+  project_id         = var.project_id
+  bucket_name        = "${local.resource_prefix}-${each.key}"
+  location           = each.value.location
+  storage_class      = each.value.storage_class
+  versioning_enabled = each.value.versioning_enabled
+  lifecycle_rules    = each.value.lifecycle_rules
+  iam_bindings       = each.value.iam_bindings
+  retention_policy   = each.value.retention_policy
+  folders            = each.value.folders
+  labels             = merge(local.common_labels, each.value.labels)
+  force_destroy      = each.value.force_destroy
+}
+
+# 5. SQL Databases
 module "databases" {
-  for_each = var.databases
   source   = "../../regional/database"
+  for_each = var.databases
 
-  project_id       = var.project_id
-  region           = each.value.region
-  instance_name    = "${local.resource_prefix}-${each.key}"
-  database_version = each.value.database_version
-  tier             = each.value.tier
-
-  network = module.networking[each.value.network_key].network_self_link
-
+  project_id            = var.project_id
+  instance_name         = "${local.resource_prefix}-${each.key}"
+  network               = try(module.networking[each.value.network_key].network_id, each.value.network_key)
+  region                = each.value.region
+  database_version      = each.value.database_version
+  tier                  = each.value.tier
   ha_enabled            = each.value.ha_enabled
   backup_enabled        = each.value.backup_enabled
   backup_retention_days = each.value.backup_retention_days
   deletion_protection   = each.value.deletion_protection
-  read_replicas         = each.value.read_replicas # P2
-
-  labels = merge(local.common_labels, each.value.custom_labels)
 
   databases = each.value.databases
   users     = each.value.users
 
-  depends_on = [module.networking, module.firewall_baseline, module.firewall_custom]
+  labels        = merge(local.common_labels, each.value.labels)
+  read_replicas = each.value.read_replicas
 }
 
-# Storage Buckets
-module "storage_buckets" {
-  for_each = var.storage_buckets
-  source   = "../../regional/storage"
-
-  project_id    = var.project_id
-  location      = each.value.location
-  bucket_name   = "${local.resource_prefix}-${each.key}"
-  storage_class = each.value.storage_class
-
-  versioning_enabled = each.value.versioning_enabled
-  force_destroy      = each.value.delete_contents_on_destroy # P2
-  labels             = merge(local.common_labels, each.value.custom_labels)
-
-  lifecycle_rules  = each.value.lifecycle_rules
-  iam_bindings     = each.value.iam_bindings
-  retention_policy = each.value.retention_policy
-  folders          = each.value.folders
-}
-
-# GKE Clusters
+# 6. GKE Clusters
 module "gke_clusters" {
-  for_each = var.gke_clusters
   source   = "../../regional/gke"
+  for_each = var.gke_clusters
 
-  project_id   = var.project_id
-  region       = each.value.region
-  cluster_name = "${local.resource_prefix}-${each.key}"
-
-  network    = module.networking[each.value.network_key].network_name
-  subnetwork = module.networking[each.value.network_key].subnet_names[coalesce(each.value.subnet_name, "${local.resource_prefix}-subnet-${each.value.region}")]
-
+  project_id             = var.project_id
+  cluster_name           = "${local.resource_prefix}-${each.key}"
+  network                = try(module.networking[each.value.network_key].network_name, each.value.network_key)
+  subnetwork             = try(module.networking[each.value.network_key].subnet_names["${local.resource_prefix}-subnet-${each.value.region}"], each.value.network_key)
+  region                 = each.value.region
   pods_ip_range_name     = each.value.pods_ip_range_name
   services_ip_range_name = each.value.services_ip_range_name
+  enable_private_cluster = each.value.enable_private_cluster
+  enable_private_nodes   = each.value.enable_private_nodes
+  master_ipv4_cidr_block = each.value.master_ipv4_cidr_block
+  enable_autopilot       = each.value.enable_autopilot
 
-  enable_private_cluster     = each.value.enable_private_cluster
-  enable_private_nodes       = each.value.enable_private_nodes
-  master_ipv4_cidr_block     = each.value.master_ipv4_cidr_block
-  master_authorized_networks = each.value.authorized_networks # P2
+  # Inject the standard service account if not provided per pool
+  node_pools = [
+    for pool in each.value.node_pools : merge(pool, {
+      service_account = coalesce(pool.service_account, module.iam.service_account_emails["${local.resource_prefix}-gke-sa"])
+    })
+  ]
 
-  node_pools = each.value.node_pools
-
-  workload_identity     = each.value.workload_identity
-  enable_network_policy = each.value.enable_network_policy
-  release_channel       = each.value.release_channel
-
-  labels = merge(local.common_labels, each.value.custom_labels)
-
-  depends_on = [module.networking, module.firewall_baseline, module.firewall_custom]
+  workload_identity          = each.value.workload_identity
+  enable_network_policy      = each.value.enable_network_policy
+  release_channel            = each.value.release_channel
+  labels                     = merge(local.common_labels, each.value.custom_labels)
+  master_authorized_networks = each.value.authorized_networks
 }
 
-# Cloud Functions
-module "cloud_functions" {
-  for_each              = var.cloud_functions
-  source                = "../../regional/cloud-functions"
+# 7. Secrets (Global module handles the map)
+module "secrets" {
+  source = "../../global/secret-manager"
+
+  project_id = var.project_id
+  # Merge common labels into each secret's labels
+  secrets = {
+    for k, v in var.secrets : k => merge(v, {
+      labels = merge(local.common_labels, v.labels)
+    })
+  }
+}
+
+# 8. Cloud Run
+module "cloud_run" {
+  source   = "../../regional/cloud-run"
+  for_each = var.cloud_run_services
+
   project_id            = var.project_id
+  service_name          = "${local.resource_prefix}-${each.key}"
   region                = each.value.region
-  function_name         = each.key
+  image                 = each.value.image
+  cpu_limit             = each.value.cpu_limit
+  memory_limit          = each.value.memory_limit
+  timeout_seconds       = each.value.timeout_seconds
+  min_instances         = each.value.min_instances
+  max_instances         = each.value.max_instances
+  env_vars              = each.value.env_vars
+  env_secrets           = each.value.env_secrets
+  allow_unauthenticated = each.value.allow_unauthenticated
+  labels                = merge(local.common_labels, each.value.labels)
+}
+
+# 9. Cloud Functions
+module "cloud_functions" {
+  source   = "../../regional/cloud-functions"
+  for_each = var.cloud_functions
+
+  project_id            = var.project_id
+  function_name         = "${local.resource_prefix}-${each.key}"
+  region                = each.value.region
   runtime               = each.value.runtime
   entry_point           = each.value.entry_point
   source_dir            = each.value.source_dir
@@ -299,21 +324,5 @@ module "cloud_functions" {
   trigger_event_type    = each.value.trigger_event_type
   trigger_pubsub_topic  = each.value.trigger_pubsub_topic
   allow_unauthenticated = each.value.allow_unauthenticated
-  labels                = merge(var.labels, each.value.custom_labels)
+  labels                = merge(local.common_labels, each.value.labels)
 }
-
-# Network Connectivity Center (Transit Hub)
-module "ncc" {
-  count  = var.enable_ncc ? 1 : 0
-  source = "../../global/ncc"
-
-  project_id = var.project_id
-  hub_name   = var.ncc_hub_name
-
-  vpc_spokes = {
-    for k, v in module.networking : k => v.network_self_link
-    if !lookup(local.merged_networks[k], "exclude_from_ncc", false)
-  }
-}
-# Note on Cloud Functions/Run: I've omitted them from the blueprint momentarily to focus on the core modules we definitely have. 
-# If they were direct resources in the dev environment, they should be moved here as resources, not module calls.

@@ -1,27 +1,35 @@
-# Architecture Overview: The Composition Blueprint
+# Architecture Overview: Layered Composition
 
 ## 🏛️ The Core Concept
 
-The "Composition Blueprint" is a design pattern where the entire infrastructure lifecycle is managed through a single, standardized reference architecture (the **Blueprint**).
+The "Layered Composition" is an evolution of the Blueprint pattern. While we still manage infrastructure through standardized reference architectures, we now decouple the lifecycle of **Shared Infrastructure** from individual **Workload Projects**.
 
-Instead of writing separate Terraform code for every environment, we define exactly **HOW** a standard environment should look in a central module (`modules/composition/environment`), and we use environment-specific folders (`environments/dev`, `environments/prod`) to define **WHAT** resources should exist.
+### From Unified to Layered
+
+In the original "Unified Blueprint" model, every resource in an environment shared a single state file. As projects scaled to hundreds of workloads, this created a massive blast radius and long deployment times.
+
+The **Layered Composition** model solves this by splitting the environment into two distinct layers:
+
+1. **Shared Infrastructure Layer**: Managed in `environments/*/infrastructure`. This handles the "plumbing" (VPC, NCC Hubs, Cloud NAT) that changes rarely but is critical for all projects.
+2. **Project Layer**: Managed in `environments/*/projects/*`. Each project has its own folder and dedicated state file, containing only the resources (VMs, GKE, SQL) needed for that specific workload.
 
 ## 🔑 Key Components
 
 ### 1. The Service Modules (Building Blocks)
 
-Granular modules (Networking, GKE, SQL) that do one thing well. They contain the low-level HCL code and follow Google Cloud best practices.
+Granular modules (`modules/global/*`, `modules/regional/*`) that do one thing well. They contain the low-level HCL code and follow Google Cloud best practices.
 
-### 2. The Composition (The Glue)
+### 2. The Shared Blueprint (The Foundation)
 
-This is the `main.tf` inside `modules/composition/environment`. It "glues" the service modules together. It knows, for example, that a VM needs a Subnet ID and a Service Account. It handles these dependencies automatically so the end-user doesn't have to.
+Managed via `modules/composition/environment` (when configured for base infrastructure). It sets up the VPCs, subnets, and transit connectivity that all projects will eventually consume.
 
-### 3. The Environment Layer (The UI)
+### 3. The Project Blueprint (The Workload)
 
-This layer consists of `.tfvars` files. It acts as the "User Interface" for the infrastructure. Developers or Platform Engineers simply provide a list of names, CIDR ranges, and machine types.
+Also managed via `modules/composition/environment`, but with `networks = {}`. It focuses on deploying applications, databases, and secrets into the existing shared networks.
 
 ## 🌟 Why This Model?
 
-1. **Elimination of Drift**: Since Dev and Prod use the exact same logic, you never run into "It works in Dev but not in Prod" networking issues.
-2. **Atomic Orchestration**: You can build a complex, interconnected 7-tier network with NCC Hubs, instances, and databases in a single `terraform apply`.
-3. **Governance at Scale**: Security policies (like our Tiered Firewalls) are written once in the Blueprint and enforced across 100% of the VPCs automatically.
+1. **Reduced Blast Radius**: A mistake in a single project state can never accidentally delete the shared VPC.
+2. **Scalability**: Independent state files mean that 10 developers can deploy 10 different projects simultaneously without state locking conflicts.
+3. **Faster Deployments**: Terraform only needs to refresh a handful of resources for a project update, rather than thousands of resources for the entire environment.
+4. **Governance at Scale**: Security policies are still defined once but can be enforced granularly at both the shared infrastructure and project levels.

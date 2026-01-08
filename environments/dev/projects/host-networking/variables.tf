@@ -1,6 +1,16 @@
+################################################################################
+# Common Variables
+################################################################################
+
 variable "project_id" {
   description = "GCP Project ID"
   type        = string
+}
+
+variable "primary_region" {
+  description = "Primary GCP region"
+  type        = string
+  default     = "asia-south1"
 }
 
 variable "customer_name" {
@@ -10,12 +20,8 @@ variable "customer_name" {
 
 variable "environment" {
   description = "Environment name"
-}
-
-variable "primary_region" {
-  description = "Primary GCP region"
   type        = string
-  default     = "asia-south1"
+  default     = "dev"
 }
 
 variable "labels" {
@@ -36,81 +42,8 @@ variable "host_project_id" {
   default     = null
 }
 
-# Compatibility Variables
-variable "enable_ncc" {
-  description = "Enable Network Connectivity Center (NCC)"
-  type        = bool
-  default     = false
-}
-
-variable "ncc_hub_name" {
-  description = "Name of the NCC Hub"
-  type        = string
-  default     = "enterprise-transit-hub"
-}
-
-variable "network_name" {
-  description = "VPC network name (Legacy)"
-  type        = string
-  default     = null
-}
-
-variable "subnet_cidr" {
-  description = "Subnet CIDR range (Legacy)"
-  type        = string
-  default     = null
-}
-
-variable "enable_nat" {
-  description = "Enable Cloud NAT (Legacy)"
-  type        = bool
-  default     = false
-}
-
-variable "subnets" {
-  description = "List of subnets to create (Legacy)"
-  type = list(object({
-    subnet_name           = string
-    subnet_ip             = string
-    subnet_region         = string
-    subnet_private_access = optional(bool, true)
-    subnet_flow_logs      = optional(bool, false)
-    description           = optional(string, "")
-    secondary_ranges = optional(list(object({
-      range_name    = string
-      ip_cidr_range = string
-    })), [])
-  }))
-  default = []
-}
-
-# Networking
-variable "networks" {
-  description = "Map of networks to create"
-  type = map(object({
-    network_name            = optional(string, null)
-    auto_create_subnetworks = optional(bool, false)
-    routing_mode            = optional(string, "REGIONAL")
-    exclude_from_ncc        = optional(bool, false)
-    subnets = list(object({
-      subnet_name           = string
-      subnet_ip             = string
-      subnet_region         = string
-      subnet_private_access = optional(bool, true)
-      subnet_flow_logs      = optional(bool, false)
-      description           = optional(string, "")
-      secondary_ranges = optional(list(object({
-        range_name    = string
-        ip_cidr_range = string
-      })), [])
-    }))
-    enable_nat = optional(bool, false)
-  }))
-  default = {}
-}
-
 variable "firewall_policies" {
-  description = "Map of firewall policies to create"
+  description = "Map of firewall policies to create, each explicitly targeting a network"
   type = map(object({
     network_key = string
     rules = list(object({
@@ -136,9 +69,12 @@ variable "firewall_policies" {
   default = {}
 }
 
-# Compute
+################################################################################
+# Workload Variables
+################################################################################
+
 variable "compute_instances" {
-  description = "Map of compute instances to create. Note: For Shared VPC service projects, subnet_name must be explicitly specified."
+  description = "Map of compute instances to create"
   type = map(object({
     network_key  = optional(string, "default")
     subnet_name  = optional(string, null)
@@ -152,37 +88,35 @@ variable "compute_instances" {
       type        = string
       auto_delete = bool
     }))
-    enable_snapshots           = bool
-    snapshot_schedule          = optional(string, "0 2 * * *")
-    snapshot_retention_days    = optional(number, 7)
-    snapshot_schedule_id       = optional(string, null)
-    enable_scheduling          = optional(bool, false)
-    start_schedule             = optional(string, "0 8 * * MON-FRI")
-    stop_schedule              = optional(string, "0 18 * * MON-FRI")
-    deletion_protection        = optional(bool, true)
-    custom_tags                = optional(list(string), [])
-    custom_labels              = optional(map(string), {})
-    is_spot                    = optional(bool, false)
-    instance_name              = optional(string, null)
-    network_project            = optional(string, null)
-    image_family               = optional(string, null)
-    image_project              = optional(string, null)
-    service_account_email      = optional(string, null)
+    enable_snapshots        = bool
+    snapshot_schedule       = optional(string, "0 2 * * *")
+    snapshot_retention_days = optional(number, 7)
+    snapshot_schedule_id    = optional(string, null)
+    enable_scheduling       = optional(bool, false)
+    start_schedule          = optional(string, "0 8 * * MON-FRI")
+    stop_schedule           = optional(string, "0 18 * * MON-FRI")
+    deletion_protection     = optional(bool, false)
+    custom_tags             = optional(list(string), [])
+    custom_labels           = optional(map(string), {})
+    is_spot                 = optional(bool, false)
+    instance_name           = optional(string, null)
+    network_project         = optional(string, null)
+    image_family            = optional(string, null)
+    image_project           = optional(string, null)
+    service_account_email   = optional(string, null)
     key_revocation_action_type = optional(string, null)
-    enable_external_ip         = optional(bool, false)
-    boot_disk_auto_delete      = optional(bool, true)
+    enable_external_ip      = optional(bool, false)
   }))
   default = {}
 }
 
-# Storage
 variable "storage_buckets" {
   description = "Map of storage buckets to create"
   type = map(object({
     location           = string
     storage_class      = string
     versioning_enabled = optional(bool, false)
-    lifecycle_rules = list(object({
+    lifecycle_rules = optional(list(object({
       action = object({
         type          = string
         storage_class = optional(string)
@@ -194,25 +128,24 @@ variable "storage_buckets" {
         created_before        = optional(string)
         num_newer_versions    = optional(number)
       })
-    }))
-    iam_bindings = list(object({
+    })), [])
+    iam_bindings = optional(list(object({
       role    = string
       members = list(string)
-    }))
+    })), [])
     retention_policy = optional(object({
       retention_period = number
       is_locked        = optional(bool, false)
     }), null)
-    folders       = list(string)
-    labels        = map(string)
-    force_destroy = bool
+    folders                    = optional(list(string), [])
+    custom_labels              = optional(map(string), {})
+    delete_contents_on_destroy = optional(bool, false)
   }))
   default = {}
 }
 
-# Database
 variable "databases" {
-  description = "Map of databases to create"
+  description = "Map of Cloud SQL databases to create"
   type = map(object({
     network_key           = optional(string, "default")
     region                = string
@@ -221,36 +154,35 @@ variable "databases" {
     ha_enabled            = optional(bool, false)
     backup_enabled        = optional(bool, true)
     backup_retention_days = optional(number, 7)
-    deletion_protection   = bool
-    databases = list(object({
+    deletion_protection   = optional(bool, false)
+    databases = optional(list(object({
       name      = string
-      charset   = string
-      collation = string
-    }))
-    users = list(object({
+      charset   = optional(string, "UTF8")
+      collation = optional(string)
+    })), [])
+    users = optional(list(object({
       name               = string
       password           = optional(string)
       password_secret_id = optional(string)
-      host               = string
-    }))
-    labels = map(string)
-    read_replicas = list(object({
+      host               = optional(string, "%")
+    })), [])
+    custom_labels = optional(map(string), {})
+    read_replicas = optional(list(object({
       name        = string
       tier        = string
       zone        = optional(string)
       disk_size   = optional(number)
       disk_type   = optional(string)
       user_labels = optional(map(string))
-      database_flags = list(object({
+      database_flags = optional(list(object({
         name  = string
         value = string
-      }))
-    }))
+      })), [])
+    })), [])
   }))
   default = {}
 }
 
-# GKE
 variable "gke_clusters" {
   description = "Map of GKE clusters to create"
   type = map(object({
@@ -278,68 +210,65 @@ variable "gke_clusters" {
     enable_network_policy = optional(bool, true)
     release_channel       = optional(string, "REGULAR")
     custom_labels         = optional(map(string), {})
-    authorized_networks = list(object({
+    authorized_networks = optional(list(object({
       cidr_block   = string
       display_name = string
-    }))
+    })), [])
   }))
   default = {}
 }
 
-# Secrets
 variable "secrets" {
   description = "Map of secrets to create"
   type = map(object({
     secret_id = string
-    replication_policy = object({
+    replication_policy = optional(object({
       automatic = optional(bool, true)
       user_managed = optional(object({
         replicas = list(object({
           location = string
         }))
       }))
-    })
-    labels = map(string)
-    versions = list(object({
+    }), { automatic = true })
+    labels = optional(map(string), {})
+    versions = optional(list(object({
       version_id  = string
       secret_data = string
-      enabled     = bool
-    }))
-    iam_bindings = list(object({
+      enabled     = optional(bool, true)
+    })), [])
+    iam_bindings = optional(list(object({
       role    = string
       members = list(string)
-    }))
+    })), [])
   }))
   default = {}
 }
 
-# Cloud Run
 variable "cloud_run_services" {
   description = "Map of Cloud Run services to create"
   type = map(object({
     region          = string
     image           = string
-    cpu_limit       = string
-    memory_limit    = string
-    timeout_seconds = number
-    min_instances   = number
-    max_instances   = number
-    env_vars = list(object({
+    cpu_limit       = optional(string, "1000m")
+    memory_limit    = optional(string, "512Mi")
+    timeout_seconds = optional(number, 300)
+    min_instances   = optional(number, 0)
+    max_instances   = optional(number, 10)
+    env_vars = optional(list(object({
       name  = string
       value = string
-    }))
-    env_secrets = list(object({
+    })), [])
+    env_secrets = optional(list(object({
       name    = string
       secret  = string
-      version = string
-    }))
-    allow_unauthenticated = bool
-    labels                = map(string)
+      version = optional(string, "latest")
+    })), [])
+    allow_unauthenticated = optional(bool, false)
+    custom_labels         = optional(map(string), {})
   }))
   default = {}
 }
 
-# Cloud Functions
 variable "cloud_functions" {
   description = "Map of Cloud Functions to create"
   type = map(object({
@@ -353,16 +282,16 @@ variable "cloud_functions" {
     min_instances    = optional(number, 0)
     max_instances    = optional(number, 100)
     env_vars         = optional(map(string), {})
-    secret_env_vars = list(object({
+    secret_env_vars = optional(list(object({
       key     = string
       secret  = string
-      version = string
-    }))
-    trigger_http          = bool
-    trigger_event_type    = string
-    trigger_pubsub_topic  = string
-    allow_unauthenticated = bool
-    labels                = map(string)
+      version = optional(string, "latest")
+    })), [])
+    trigger_http          = optional(bool, false)
+    trigger_event_type    = optional(string, null)
+    trigger_pubsub_topic  = optional(string, null)
+    allow_unauthenticated = optional(bool, false)
+    custom_labels         = optional(map(string), {})
   }))
   default = {}
 }

@@ -48,6 +48,12 @@ variable "disk_type" {
   default     = "pd-standard"
 }
 
+variable "boot_disk_auto_delete" {
+  description = "Whether the boot disk should be auto-deleted when the instance is deleted. Set to false to preserve boot disk."
+  type        = bool
+  default     = true
+}
+
 variable "network" {
   description = "VPC network name"
   type        = string
@@ -56,6 +62,12 @@ variable "network" {
 variable "subnetwork" {
   description = "Subnet name"
   type        = string
+}
+
+variable "network_project" {
+  description = "Project ID of the network host (for Shared VPC)"
+  type        = string
+  default     = null
 }
 
 variable "tags" {
@@ -169,10 +181,10 @@ variable "enable_snapshots" {
 variable "snapshot_schedule" {
   description = "Snapshot schedule configuration"
   type = object({
-    name          = string
-    description   = optional(string, "")
-    schedule      = string  # e.g., "0 2 * * *" (cron format)
-    retention_days = optional(number, 7)
+    name              = string
+    description       = optional(string, "")
+    schedule          = string # e.g., "0 2 * * *" (cron format)
+    retention_days    = optional(number, 7)
     storage_locations = optional(list(string), [])
   })
   default = null
@@ -194,8 +206,8 @@ variable "enable_scheduling" {
 variable "schedule_config" {
   description = "Instance schedule configuration"
   type = object({
-    start_schedule = optional(string, null)  # e.g., "0 8 * * MON-FRI"
-    stop_schedule  = optional(string, null)  # e.g., "0 18 * * MON-FRI"
+    start_schedule = optional(string, null) # e.g., "0 8 * * MON-FRI"
+    stop_schedule  = optional(string, null) # e.g., "0 18 * * MON-FRI"
     timezone       = optional(string, "UTC")
   })
   default = null
@@ -274,6 +286,18 @@ variable "can_ip_forward" {
 
 variable "enable_nested_virtualization" {
   description = "Enable nested virtualization"
+  type        = bool
+  default     = false
+}
+
+variable "key_revocation_action_type" {
+  description = "Action to take when key is revoked"
+  type        = string
+  default     = null
+}
+
+variable "enable_external_ip" {
+  description = "Whether to assign a public IP to the instance"
   type        = bool
   default     = false
 }
